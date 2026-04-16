@@ -7,8 +7,8 @@ The container wires concrete implementations at startup.
 
 import uuid
 
-from app.app_layer.interfaces.event_publisher import AbstractEventPublisher
-from app.app_layer.interfaces.unit_of_work import AbstractUnitOfWork
+from app.app_layer.interfaces.rabbit.event_publisher import AbstractEventPublisher
+from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
 from app.domain.exceptions import DuplicateIdempotencyKeyError, PaymentNotFoundError
 from app.domain.models.payment import Currency, Payment
 

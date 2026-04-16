@@ -2,9 +2,9 @@ from dependency_injector import containers, providers
 
 from app.config import settings
 from app.infra.db.session import build_session_factory
-from app.infra.db.unit_of_work import SqlAlchemyUnitOfWork
+from app.infra.unit_of_work.alchemy import Uow
 from app.infra.messaging.publisher import RabbitMQEventPublisher
-from app.app_layer.services.payment_service import PaymentService
+from app.app_layer.services.payment import PaymentService
 
 
 class Container(containers.DeclarativeContainer):
@@ -28,7 +28,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     unit_of_work = providers.Factory(
-        SqlAlchemyUnitOfWork,
+        Uow,
         session_factory=session_factory,
     )
 
