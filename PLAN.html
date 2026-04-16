@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment Service — Implementation Plan</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2a2d3a;
+      --accent:   #6c63ff;
+      --green:    #22c55e;
+      --yellow:   #eab308;
+      --red:      #ef4444;
+      --blue:     #3b82f6;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --tag-bg:   #1e2235;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #12141e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 40px 28px;
+    }
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    header p {
+      color: var(--muted);
+      margin-top: 4px;
+      font-size: 13px;
+    }
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .badge {
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .badge.accent { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+
+    /* ── Progress bar ── */
+    .progress-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .progress-header span { font-size: 13px; color: var(--muted); }
+    .progress-header strong { font-size: 13px; color: var(--text); }
+    .bar-track {
+      background: var(--border);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      transition: width 0.4s ease;
+    }
+    .phase-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .phase-dot {
+      flex: 1;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--border);
+    }
+    .phase-dot.done   { background: var(--green); }
+    .phase-dot.active { background: var(--accent); }
+
+    /* ── Phase section ── */
+    .phase {
+      margin-bottom: 28px;
+    }
+    .phase-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .phase-num {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .phase-num.done   { background: #166534; color: var(--green); }
+    .phase-num.active { background: #3730a3; color: #a5b4fc; }
+    .phase-num.todo   { background: var(--border); color: var(--muted); }
+
+    .phase-title h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .phase-title .phase-status {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .status-done   { background: #14532d; color: var(--green); }
+    .status-active { background: #312e81; color: #a5b4fc; }
+    .status-todo   { background: var(--border); color: var(--muted); }
+
+    /* ── Step cards ── */
+    .steps { display: flex; flex-direction: column; gap: 8px; }
+
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .step:hover { border-color: #3a3d52; }
+    .step.done   { border-left: 3px solid var(--green); }
+    .step.active { border-left: 3px solid var(--accent); }
+    .step.todo   { border-left: 3px solid var(--border); }
+
+    .step-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .step-check {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+    }
+    .step.done   .step-check { background: var(--green); color: #052e16; }
+    .step.active .step-check { background: var(--accent); color: #fff; }
+    .step.todo   .step-check { background: var(--border); color: transparent; border: 1.5px solid var(--muted); }
+
+    .step-title {
+      flex: 1;
+      font-weight: 500;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+    .step.done .step-title { color: var(--muted); text-decoration: line-through; }
+
+    .step-tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 3px;
+    }
+    .tag {
+      font-size: 10px;
+      padding: 1px 7px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--tag-bg);
+    }
+    .tag.green  { border-color: #166534; color: var(--green); background: #052e16; }
+    .tag.blue   { border-color: #1e3a5f; color: var(--blue);  background: #0f1e30; }
+    .tag.purple { border-color: #3730a3; color: #a5b4fc;     background: #1e1b4b; }
+    .tag.yellow { border-color: #713f12; color: var(--yellow); background: #1c1000; }
+    .tag.red    { border-color: #7f1d1d; color: var(--red);  background: #1c0000; }
+
+    .chevron {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .step.open .chevron { transform: rotate(180deg); }
+
+    .step-body {
+      display: none;
+      padding: 0 16px 14px 46px;
+    }
+    .step.open .step-body { display: block; }
+
+    .step-body p {
+      color: var(--muted);
+      font-size: 12.5px;
+      margin-bottom: 10px;
+    }
+    .step-body ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .step-body ul li {
+      font-size: 12.5px;
+      color: #94a3b8;
+      padding-left: 16px;
+      position: relative;
+    }
+    .step-body ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 11px;
+    }
+    .step-body .file-ref {
+      margin-top: 10px;
+      background: #12141e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 11.5px;
+      color: #7c85a8;
+      line-height: 1.8;
+    }
+    .step-body .file-ref span { color: #a5b4fc; }
+
+    /* ── Requirements checklist ── */
+    .req-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    @media (max-width: 600px) { .req-grid { grid-template-columns: 1fr; } }
+
+    .req-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .req-item .ri { font-size: 14px; flex-shrink: 0; }
+
+    /* ── Footer note ── */
+    .note {
+      background: #12141e;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 12.5px;
+      color: var(--muted);
+      margin-top: 24px;
+    }
+    .note strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Async Payment Processing Service</h1>
+  <p>Implementation roadmap · Clean Architecture · FastAPI + RabbitMQ + PostgreSQL</p>
+  <div class="badge-row">
+    <span class="badge accent">Python 3.12</span>
+    <span class="badge">FastAPI 0.115+</span>
+    <span class="badge">SQLAlchemy 2.0</span>
+    <span class="badge">FastStream / RabbitMQ</span>
+    <span class="badge">Pydantic v2</span>
+    <span class="badge">dependency-injector</span>
+    <span class="badge">Alembic</span>
+    <span class="badge">Docker Compose</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Progress -->
+  <div class="progress-card">
+    <div class="progress-header">
+      <span>Overall progress</span>
+      <strong id="prog-label">1 / 6 phases complete</strong>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="bar" style="width:17%"></div></div>
+    <div class="phase-dots">
+      <div class="phase-dot done"  title="Phase 1 — Skeleton"></div>
+      <div class="phase-dot active" title="Phase 2 — Migrations"></div>
+      <div class="phase-dot" title="Phase 3 — Consumer"></div>
+      <div class="phase-dot" title="Phase 4 — Outbox Relay"></div>
+      <div class="phase-dot" title="Phase 5 — Tests"></div>
+      <div class="phase-dot" title="Phase 6 — Verification"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 1 ═══ -->
+  <div class="phase">
+    <div class="phase-title">
+      <div class="phase-num done">✓</div>
+      <h2>Phase 1 — Project Skeleton</h2>
+      <span class="phase-status status-done">Complete</span>
+    </div>
+    <div class="steps">
+
+      <div class="step done">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check">✓</div>
+          <div style="flex:1">
+            <div class="step-title">Folder structure + Clean Architecture layers</div>
+            <div class="step-tags">
+              <span class="tag green">done</span>
+              <span class="tag">domain</span>
+              <span class="tag">app_layer</span>
+              <span class="tag">infra</span>
+              <span class="tag">api</span>
+            </div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>Four-layer architecture with strict dependency rules. Each layer imports only from the layer below it.</p>
+          <ul>
+            <li><code>domain/</code> — Pydantic models, enums, domain exceptions (no I/O)</li>
+            <li><code>app_layer/</code> — Abstract interfaces (UoW, repos, publisher) + PaymentService</li>
+            <li><code>infra/</code> — SQLAlchemy ORM, FastStream broker, concrete implementations</li>
+            <li><code>api/</code> — FastAPI routers, request/response schemas, auth dependency</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step done">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check">✓</div>
+          <div style="flex:1">
+            <div class="step-title">Dependency injection container (dependency-injector)</div>
+            <div class="step-tags"><span class="tag green">done</span><span class="tag">container.py</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li>DeclarativeContainer wires session_factory → UoW → PaymentService</li>
+            <li>Endpoints use <code>Depends(Provide[Container.payment_service])</code></li>
+            <li>Container wired to <code>app.api</code> package in lifespan</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step done">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check">✓</div>
+          <div style="flex:1">
+            <div class="step-title">Docker Compose — postgres, rabbitmq, api, consumer</div>
+            <div class="step-tags"><span class="tag green">done</span><span class="tag">docker-compose.yml</span><span class="tag">Dockerfile</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li>postgres:16-alpine with healthcheck</li>
+            <li>rabbitmq:3-management-alpine with healthcheck + management UI on :15672</li>
+            <li>api service — uvicorn with --reload, depends on healthy postgres + rabbitmq</li>
+            <li>consumer service — standalone process, same dependencies</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 2 ═══ -->
+  <div class="phase">
+    <div class="phase-title">
+      <div class="phase-num active">2</div>
+      <h2>Phase 2 — Database Models & Migrations</h2>
+      <span class="phase-status status-active">Next up</span>
+    </div>
+    <div class="steps">
+
+      <div class="step active open">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check">→</div>
+          <div style="flex:1">
+            <div class="step-title">Generate initial Alembic migration (payments + outbox tables)</div>
+            <div class="step-tags">
+              <span class="tag purple">migrations</span>
+              <span class="tag blue">alembic</span>
+            </div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>ORM models are defined. Now generate the migration file and verify the SQL.</p>
+          <ul>
+            <li>Start postgres: <code>docker-compose up postgres -d</code></li>
+            <li>Run autogenerate: <code>docker-compose run --rm api alembic revision --autogenerate -m "init"</code></li>
+            <li>Review generated file in <code>migrations/versions/</code> — check column types, enums, indexes</li>
+            <li>Apply: <code>docker-compose run --rm api alembic upgrade head</code></li>
+          </ul>
+          <div class="file-ref">
+            Tables to verify:<br/>
+            <span>payments</span>  — id, amount, currency, description, metadata, status,<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;idempotency_key (UNIQUE), webhook_url, created_at, processed_at<br/>
+            <span>outbox</span>    — id, event_type, payload (JSONB), published (idx), created_at, published_at
+          </div>
+        </div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Verify idempotency_key unique constraint works</div>
+            <div class="step-tags"><span class="tag">db</span><span class="tag blue">psql</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li>Connect to postgres and inspect schema: <code>\d payments</code></li>
+            <li>Confirm UNIQUE index on <code>idempotency_key</code> exists</li>
+            <li>Confirm JSONB type on <code>metadata</code> and <code>payload</code> columns</li>
+            <li>Confirm enum types <code>currency_enum</code> and <code>payment_status_enum</code> created</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 3 ═══ -->
+  <div class="phase">
+    <div class="phase-title">
+      <div class="phase-num todo">3</div>
+      <h2>Phase 3 — Consumer Implementation</h2>
+      <span class="phase-status status-todo">Pending</span>
+    </div>
+    <div class="steps">
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Payment gateway emulation (2-5s delay, 90/10 success rate)</div>
+            <div class="step-tags"><span class="tag">consumer</span><span class="tag yellow">core logic</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>Implement inside <code>src/app/infra/messaging/consumer.py</code> → <code>handle_new_payment()</code></p>
+          <ul>
+            <li><code>await asyncio.sleep(random.uniform(2, 5))</code> — simulate gateway latency</li>
+            <li><code>succeeded = random.random() &lt; 0.9</code> — 90% success, 10% failure</li>
+            <li>Update <code>payment.status</code> to <code>succeeded</code> or <code>failed</code></li>
+            <li>Set <code>payment.processed_at = datetime.utcnow()</code></li>
+            <li>Persist via <code>SqlAlchemyUnitOfWork</code> (already wired in container)</li>
+          </ul>
+          <div class="file-ref">
+            File: <span>src/app/infra/messaging/consumer.py</span><br/>
+            Uses: <span>SqlAlchemyUnitOfWork</span>, <span>Payment.status</span>, <span>PaymentStatus</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Webhook notification with exponential retry (3 attempts)</div>
+            <div class="step-tags"><span class="tag">consumer</span><span class="tag yellow">retry</span><span class="tag blue">httpx</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>After status update, POST to <code>payment.webhook_url</code> with result payload.</p>
+          <ul>
+            <li>Use <code>httpx.AsyncClient</code> for async HTTP calls</li>
+            <li>Retry schedule: attempt 1 → wait 2s → attempt 2 → wait 4s → attempt 3</li>
+            <li>Payload: <code>{"payment_id", "status", "amount", "currency", "processed_at"}</code></li>
+            <li>If all 3 attempts fail: log error, do NOT raise (payment is already processed)</li>
+            <li>Timeout per request: 5 seconds</li>
+          </ul>
+          <div class="file-ref">
+            Helper: <span>async def send_webhook(url, payload, max_retries=3)</span><br/>
+            Back-off: <span>await asyncio.sleep(2 ** attempt)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Dead Letter Queue — NACK after 3 processing failures</div>
+            <div class="step-tags"><span class="tag red">DLQ</span><span class="tag">RabbitMQ</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>If the consumer raises an unhandled exception, FastStream NACKs the message. After 3 NACKs RabbitMQ routes it to the DLQ (already configured in <code>broker.py</code>).</p>
+          <ul>
+            <li>Wrap entire handler in try/except; re-raise only on unexpected infra errors</li>
+            <li>RabbitMQ DLQ queue <code>payments.dead_letter</code> already declared in <code>broker.py</code></li>
+            <li>Add a second subscriber <code>@broker.subscriber(payments_dlq)</code> that logs DLQ messages</li>
+            <li>Monitor DLQ via RabbitMQ Management UI at <code>http://localhost:15672</code></li>
+          </ul>
+          <div class="file-ref">
+            File: <span>src/app/infra/messaging/consumer.py</span><br/>
+            Queue: <span>payments.dead_letter</span> (durable, declared in broker.py)
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 4 ═══ -->
+  <div class="phase">
+    <div class="phase-title">
+      <div class="phase-num todo">4</div>
+      <h2>Phase 4 — Outbox Relay (Guaranteed Delivery)</h2>
+      <span class="phase-status status-todo">Pending</span>
+    </div>
+    <div class="steps">
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Background outbox relay loop</div>
+            <div class="step-tags"><span class="tag yellow">outbox</span><span class="tag">background task</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>The Outbox pattern ensures payments are <em>atomically</em> saved to DB and queued for the broker — even if RabbitMQ is temporarily down.</p>
+          <ul>
+            <li>Create <code>src/app/infra/messaging/outbox_relay.py</code></li>
+            <li>Loop: <code>while True: poll DB for unpublished rows → publish → mark published → sleep(1)</code></li>
+            <li>Run as <code>asyncio.create_task()</code> inside FastAPI lifespan (api service)</li>
+            <li>Use <code>SqlAlchemyUnitOfWork</code> to read and mark rows atomically</li>
+            <li>Publish via <code>RabbitMQEventPublisher.publish(row["event_type"], row["payload"])</code></li>
+          </ul>
+          <div class="file-ref">
+            New file: <span>src/app/infra/messaging/outbox_relay.py</span><br/>
+            Wired in: <span>src/app/main.py</span> → lifespan asyncio.create_task
+          </div>
+        </div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Verify atomic write: payment + outbox row in same transaction</div>
+            <div class="step-tags"><span class="tag yellow">outbox</span><span class="tag">UoW</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li>Both <code>uow.payments.add()</code> and <code>uow.outbox.add()</code> happen before <code>await uow.commit()</code></li>
+            <li>Already wired in <code>PaymentService.create_payment()</code> — verify no commit between them</li>
+            <li>If broker is down during relay, outbox row stays unpublished; next poll picks it up</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 5 ═══ -->
+  <div class="phase">
+    <div class="phase-title">
+      <div class="phase-num todo">5</div>
+      <h2>Phase 5 — Tests</h2>
+      <span class="phase-status status-todo">Pending</span>
+    </div>
+    <div class="steps">
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Unit tests — PaymentService with fake UoW</div>
+            <div class="step-tags"><span class="tag blue">unit</span><span class="tag">pytest-asyncio</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li>Create <code>tests/unit/test_payment_service.py</code></li>
+            <li>Implement <code>FakeUnitOfWork</code> and <code>FakePaymentRepository</code> (in-memory dict)</li>
+            <li>Test: create_payment returns Payment with status=pending</li>
+            <li>Test: duplicate idempotency_key returns existing payment (idempotency)</li>
+            <li>Test: get_payment raises PaymentNotFoundError for unknown ID</li>
+          </ul>
+          <div class="file-ref">
+            New file: <span>tests/unit/test_payment_service.py</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Integration tests — POST /payments and GET /payments/{id}</div>
+            <div class="step-tags"><span class="tag blue">integration</span><span class="tag">httpx</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li>Create <code>tests/integration/test_payments_api.py</code></li>
+            <li>Use AsyncClient from <code>tests/conftest.py</code></li>
+            <li>Test: POST without X-API-Key → 401</li>
+            <li>Test: POST without Idempotency-Key → 422</li>
+            <li>Test: valid POST → 202, response has payment_id + status=pending</li>
+            <li>Test: same Idempotency-Key twice → 202, same payment_id returned</li>
+            <li>Test: GET unknown ID → 404</li>
+            <li>Test: GET known ID → 200, full payment detail</li>
+          </ul>
+          <div class="file-ref">
+            New file: <span>tests/integration/test_payments_api.py</span><br/>
+            Needs: real DB running (override container in conftest or use SQLite)
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 6 ═══ -->
+  <div class="phase">
+    <div class="phase-title">
+      <div class="phase-num todo">6</div>
+      <h2>Phase 6 — End-to-End Verification</h2>
+      <span class="phase-status status-todo">Pending</span>
+    </div>
+    <div class="steps">
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Full docker-compose smoke test</div>
+            <div class="step-tags"><span class="tag">docker</span><span class="tag blue">e2e</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li><code>docker-compose up --build</code> — all 4 containers healthy</li>
+            <li><code>docker-compose exec api alembic upgrade head</code> — migrations applied</li>
+            <li>Open <code>http://localhost:8000/docs</code> — Swagger shows 2 endpoints</li>
+            <li>POST a payment via Swagger with a valid X-API-Key and Idempotency-Key</li>
+            <li>Wait 3-7s, GET same payment_id — status should be <code>succeeded</code> or <code>failed</code></li>
+            <li>Open <code>http://localhost:15672</code> — RabbitMQ Management, check queue stats</li>
+          </ul>
+          <div class="file-ref">
+            API key default: <span>supersecretkey</span> (from .env.example)<br/>
+            RabbitMQ UI: <span>guest / guest</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-header" onclick="toggle(this)">
+          <div class="step-check"></div>
+          <div style="flex:1">
+            <div class="step-title">Final checklist — all spec requirements covered</div>
+            <div class="step-tags"><span class="tag">spec</span></div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <div class="req-grid">
+            <div class="req-item"><span class="ri">✅</span> payments + outbox DB tables</div>
+            <div class="req-item"><span class="ri">✅</span> POST /api/v1/payments (202)</div>
+            <div class="req-item"><span class="ri">✅</span> GET /api/v1/payments/{id}</div>
+            <div class="req-item"><span class="ri">✅</span> Idempotency-Key header</div>
+            <div class="req-item"><span class="ri">✅</span> X-API-Key authentication</div>
+            <div class="req-item"><span class="ri">⬜</span> Consumer: emulate 2-5s, 90/10</div>
+            <div class="req-item"><span class="ri">⬜</span> Consumer: update DB status</div>
+            <div class="req-item"><span class="ri">⬜</span> Consumer: send webhook</div>
+            <div class="req-item"><span class="ri">⬜</span> Webhook retry × 3 (exp. backoff)</div>
+            <div class="req-item"><span class="ri">⬜</span> Outbox pattern (atomic publish)</div>
+            <div class="req-item"><span class="ri">⬜</span> Dead Letter Queue (3 NACKs)</div>
+            <div class="req-item"><span class="ri">✅</span> Docker Compose (4 services)</div>
+            <div class="req-item"><span class="ri">✅</span> README with run + examples</div>
+            <div class="req-item"><span class="ri">⬜</span> Tests pass</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Current state:</strong> The clean architecture skeleton is complete. All interfaces, ORM models, DI wiring, API endpoints, and Docker setup are in place. The remaining work (Phases 2–6) is <strong>purely implementation</strong> — filling in the stubbed methods with business logic, following the patterns already established in the code.
+  </div>
+
+</div>
+
+<script>
+  function toggle(header) {
+    const step = header.closest('.step');
+    step.classList.toggle('open');
+  }
+</script>
+
+</body>
+</html>
