@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.app_layer.interfaces.repositories import AbstractOutboxRepository, OutboxEventDTO
+from app.domain.models.outbox import OutboxEventType
 from app.infra.db.models import OutboxORM
 
 
@@ -16,7 +17,7 @@ class SqlAlchemyOutboxRepository(AbstractOutboxRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def add(self, event_type: str, payload: dict) -> None:
+    async def add(self, event_type: OutboxEventType, payload: dict) -> None:
         row = OutboxORM(event_type=event_type, payload=payload)
         self._session.add(row)
 

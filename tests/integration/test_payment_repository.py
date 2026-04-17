@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.domain.exceptions import DuplicateIdempotencyKeyError
+from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import PaymentStatus
 from app.infra.repositories.outbox_repository import SqlAlchemyOutboxRepository
 from app.infra.repositories.payment_repository import PaymentsRepository
@@ -118,19 +119,19 @@ async def test_outbox_add_and_get_unpublished(db_session):
     
     repo = SqlAlchemyOutboxRepository(db_session)
 
-    await repo.add("payments.new", {"payment_id": str(uuid.uuid4())})
+    await repo.add(OutboxEventType.PAYMENTS_NEW, {"payment_id": str(uuid.uuid4())})
     await db_session.flush()
 
     events = await repo.get_unpublished()
     assert len(events) >= 1
-    assert events[-1].event_type == "payments.new"
+    assert events[-1].event_type == OutboxEventType.PAYMENTS_NEW
 
 
 async def test_outbox_mark_published(db_session):
     repo = SqlAlchemyOutboxRepository(db_session)
     payment_id = str(uuid.uuid4())
 
-    await repo.add("payments.new", {"payment_id": payment_id})
+    await repo.add(OutboxEventType.PAYMENTS_NEW, {"payment_id": payment_id})
     await db_session.flush()
 
     

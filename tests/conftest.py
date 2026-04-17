@@ -15,6 +15,7 @@ from tests.satellites import (
     make_payment_api_body,
     make_payment_entity,
     make_payment_service,
+    make_outbox_service,
 )
 
 
@@ -48,6 +49,7 @@ async def db_session(engine):
 @pytest.fixture
 def fake_publisher() -> FakePublisher:
     return FakePublisher()
+
 
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession, fake_publisher: FakePublisher) -> AsyncClient:
@@ -83,3 +85,9 @@ def payment_entity(payment_records):
 def payment_service(db_session):
     """Returns a PaymentService instance wired with TestUow."""
     return make_payment_service(TestUow(db_session))
+
+
+@pytest.fixture
+def outbox_service(db_session):
+    """Returns an OutboxService instance wired with TestUow."""
+    return make_outbox_service(TestUow(db_session))

@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from app.app_layer.services.payment import PaymentService
+from app.app_layer.services.outbox import OutboxService
 from app.domain.models.payment import Currency, PaymentEntity
 
 
@@ -27,3 +28,7 @@ def make_payment_api_body(record: dict) -> dict:
 
 def make_payment_service(uow) -> PaymentService:
     return PaymentService(uow=uow, on_outbox_write=lambda: None)
+
+
+def make_outbox_service(uow) -> OutboxService:
+    return OutboxService(uow=uow)

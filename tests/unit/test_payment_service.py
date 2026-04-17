@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 
 from app.domain.exceptions import PaymentNotFoundError
+from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import Currency, PaymentStatus
 from tests.environment.unit_of_work import TestUow
 
@@ -80,7 +81,7 @@ async def test_create_payment_adds_outbox_event(db_session, payment_service, pay
     async with TestUow(db_session) as uow:
         events = await uow.outbox.get_unpublished()
     assert len(events) == 1
-    assert events[0].event_type == "payments.new"
+    assert events[0].event_type == OutboxEventType.PAYMENTS_NEW
     assert events[0].payload == {"payment_id": str(payment.id)}
 
 

@@ -11,6 +11,7 @@ from decimal import Decimal
 
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
 from app.domain.exceptions import PaymentNotFoundError
+from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import Currency, PaymentEntity
 
 
@@ -51,7 +52,7 @@ class PaymentService:
 
             # Outbox: write event atomically with the payment record
             await uow.outbox.add(
-                event_type="payments.new",
+                event_type=OutboxEventType.PAYMENTS_NEW,
                 payload={"payment_id": str(payment.id)},
             )
 
