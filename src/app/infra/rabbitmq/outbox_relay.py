@@ -22,6 +22,7 @@ class OutboxRelay:
         self.session_factory = session_factory
         self.publisher = publisher
         self.wakeup = asyncio.Event()
+        self._running = True
 
     def notify(self) -> None:
         self.wakeup.set()
@@ -34,8 +35,12 @@ class OutboxRelay:
         async for _ in self.poll_ticks():
             await self.process_batch()
 
+    def stop(self) -> None:
+        self._running = False
+        self.wakeup.set()
+
     async def poll_ticks(self) -> AsyncIterator[None]:
-        while True:
+        while self._running:
             try:
                 await asyncio.wait_for(
                     self.wakeup.wait(),

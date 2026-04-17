@@ -1,9 +1,5 @@
-"""
-SQLAlchemy implementation of AbstractOutboxRepository.
-"""
-
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +23,7 @@ class SqlAlchemyOutboxRepository(AbstractOutboxRepository):
     async def get_unpublished(self, limit: int = 100) -> list[OutboxEventDTO]:
         stmt = (
             select(OutboxORM)
-            .where(OutboxORM.published == False)  # noqa: E712
+            .where(OutboxORM.published.is_(False))
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
@@ -41,4 +37,4 @@ class SqlAlchemyOutboxRepository(AbstractOutboxRepository):
         row = await self._session.get(OutboxORM, event_id)
         if row:
             row.published = True
-            row.published_at = datetime.utcnow()
+            row.published_at = datetime.now(UTC)

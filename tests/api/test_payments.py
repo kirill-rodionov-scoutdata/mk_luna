@@ -1,10 +1,14 @@
 import uuid
 from decimal import Decimal
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
+from dependency_injector import providers
 from httpx import AsyncClient
 
+from app.domain.exceptions import DomainError, DuplicateIdempotencyKeyError
+from app.main import app
 from tests.satellites import make_payment_api_body
 
 
@@ -171,3 +175,44 @@ async def test_get_payment_returns_metadata(
     get_resp = await client.get(f"/api/v1/payments/{payment_id}")
 
     assert get_resp.json()["metadata"] == record["metadata"]
+
+
+async def test_create_payment_returns_409_on_duplicate_idempotency_key(
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+    payment_records: list[dict[str, Any]],
+    mock_payment_service: AsyncMock,
+) -> None:
+    container = app.state.container
+    key = payment_records[0]["idempotency_key"]
+    mock_payment_service.create_payment.side_effect = DuplicateIdempotencyKeyError(key)
+
+    with container.payment_service.override(providers.Object(mock_payment_service)):
+        resp = await client.post(
+            "/api/v1/payments",
+            json=payment_body,
+            headers={"Idempotency-Key": key},
+        )
+
+    assert resp.status_code == 409
+    assert key in resp.json()["detail"]
+
+
+async def test_create_payment_returns_400_on_domain_error(
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+    payment_records: list[dict[str, Any]],
+    mock_payment_service: AsyncMock,
+) -> None:
+    container = app.state.container
+    mock_payment_service.create_payment.side_effect = DomainError("invalid amount")
+
+    with container.payment_service.override(providers.Object(mock_payment_service)):
+        resp = await client.post(
+            "/api/v1/payments",
+            json=payment_body,
+            headers={"Idempotency-Key": payment_records[0]["idempotency_key"]},
+        )
+
+    assert resp.status_code == 400
+    assert "invalid amount" in resp.json()["detail"]

@@ -1,9 +1,3 @@
-"""
-SQLAlchemy implementation of AbstractPaymentRepository.
-
-Maps between the ORM model (PaymentORM) and the domain model (PaymentEntity).
-"""
-
 import uuid
 
 from sqlalchemy import select

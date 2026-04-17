@@ -72,6 +72,36 @@ async def test_process_payment_fails_on_gateway_error(
 
 
 @pytest.mark.asyncio
+async def test_process_payment_swallows_webhook_exception(
+    payment_service: PaymentService,
+    outbox_service: OutboxService,
+    db_session: AsyncSession,
+    payment_records: list[dict[str, Any]],
+) -> None:
+    record = payment_records[0]
+    kwargs = {
+        **record,
+        "amount": Decimal(record["amount"]),
+        "currency": Currency(record["currency"]),
+    }
+    payment = await payment_service.create_payment(PaymentCreateDTO(**kwargs))
+
+    with patch.object(
+        outbox_service, "_simulate_external_gate_processing", AsyncMock()
+    ):
+        with patch.object(
+            outbox_service,
+            "send_webhook_notification",
+            AsyncMock(side_effect=Exception("webhook timeout")),
+        ):
+            await outbox_service.process_payment(payment.id)
+
+    async with TestUow(db_session) as uow:
+        updated = await uow.payments.get(payment.id)
+        assert updated.status == PaymentStatus.SUCCEEDED
+
+
+@pytest.mark.asyncio
 async def test_process_payment_idempotent_if_already_processed(
     payment_service: PaymentService,
     outbox_service: OutboxService,

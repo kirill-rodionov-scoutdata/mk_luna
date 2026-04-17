@@ -1,6 +1,7 @@
 import json
 import pathlib
 from typing import Any, AsyncGenerator
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -8,6 +9,7 @@ from dependency_injector import providers
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 
+from app.app_layer.interfaces.outbox_messages.service import AbstractOutboxService
 from app.app_layer.services.outbox import OutboxService
 from app.app_layer.services.payment import PaymentService
 from app.config import settings
@@ -88,3 +90,18 @@ def payment_service(db_session: AsyncSession) -> PaymentService:
 @pytest.fixture
 def outbox_service(db_session: AsyncSession) -> OutboxService:
     return make_outbox_service(TestUow(db_session))
+
+
+@pytest.fixture
+def mock_outbox_service() -> AsyncMock:
+    svc = AsyncMock(spec=AbstractOutboxService)
+    svc.process_payment = AsyncMock()
+    return svc
+
+
+@pytest.fixture
+def mock_payment_service() -> AsyncMock:
+    svc = AsyncMock(spec=PaymentService)
+    svc.create_payment = AsyncMock()
+    svc.get_payment = AsyncMock()
+    return svc

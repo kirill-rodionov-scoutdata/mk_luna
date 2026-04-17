@@ -1,3 +1,5 @@
+from typing import Self
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
@@ -9,7 +11,7 @@ class AlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self.session_factory = session_factory
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         self.session: AsyncSession = self.session_factory()
         self.payments = PaymentsRepository(self.session)
         self.outbox = SqlAlchemyOutboxRepository(self.session)
@@ -23,5 +25,3 @@ class AlchemyUnitOfWork(AbstractUnitOfWork):
 
     async def shutdown(self) -> None:
         await self.session.close()
-        del self.payments
-        del self.outbox
