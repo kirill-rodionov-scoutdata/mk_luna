@@ -1,21 +1,15 @@
-"""
-PaymentService — application use-case orchestrator.
-
-Depends only on abstract interfaces; never imports SQLAlchemy or FastStream.
-The container wires concrete implementations at startup.
-"""
-
 import uuid
 from collections.abc import Callable
 from decimal import Decimal
 
+from app.app_layer.interfaces.payments.service import AbstractPaymentService
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
 from app.domain.exceptions import PaymentNotFoundError
 from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import Currency, PaymentEntity
 
 
-class PaymentService:
+class PaymentService(AbstractPaymentService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,

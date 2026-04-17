@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import httpx
 
-from app.app_layer.interfaces.services import AbstractOutboxService
+from app.app_layer.interfaces.outbox_messages.service import AbstractOutboxService
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
 from app.domain.exceptions import PaymentNotFoundError
 from app.domain.models.payment import PaymentEntity, PaymentStatus
