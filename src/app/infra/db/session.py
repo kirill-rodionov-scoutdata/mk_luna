@@ -1,10 +1,3 @@
-"""
-Async SQLAlchemy session factory.
-
-`build_session_factory` is called once at startup (via the DI container)
-and returns an `async_sessionmaker` bound to the engine.
-"""
-
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 

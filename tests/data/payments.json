@@ -1,0 +1,73 @@
+[
+  {
+    "idempotency_key": "ord_2024_98712_cloudhub_premium_annual",
+    "amount": "4999.99",
+    "currency": "USD",
+    "description": "Premium Annual Subscription – CloudHub Pro",
+    "metadata": {
+      "customer_id": "cust_8f3a2b1c",
+      "order_id": "ORD-98712",
+      "plan": "premium_annual",
+      "billing_cycle": "yearly",
+      "source": "web_checkout"
+    },
+    "webhook_url": "https://billing.cloudhub.io/webhooks/payment-events"
+  },
+  {
+    "idempotency_key": "bkg_2024_ritz_london_3nights_deluxe",
+    "amount": "1875.50",
+    "currency": "EUR",
+    "description": "Hotel Reservation – The Ritz London, 3 nights, Deluxe Double",
+    "metadata": {
+      "reservation_id": "RES-20241112",
+      "guest_id": "gst_f7e2c831",
+      "check_in": "2024-11-20",
+      "check_out": "2024-11-23",
+      "room_type": "deluxe_double",
+      "adults": 2
+    },
+    "webhook_url": "https://reservations.ritz-london.co.uk/callbacks/payment"
+  },
+  {
+    "idempotency_key": "sub_2024_saas_team_plan_25seats_october",
+    "amount": "2750.00",
+    "currency": "RUB",
+    "description": "SaaS Platform – Team Plan, 25 seats, October 2024",
+    "metadata": {
+      "workspace_id": "ws_3a9f81c2",
+      "billing_period": "2024-10",
+      "seat_count": 25,
+      "discount_code": "AUTUMN2024",
+      "account_manager": "elena.sorokina@platform.ru"
+    },
+    "webhook_url": "https://api.myplatform.ru/v2/webhooks/billing"
+  },
+  {
+    "idempotency_key": "cmp_2024_digital_adv_q4_nov_burst",
+    "amount": "850.00",
+    "currency": "USD",
+    "description": "Digital Advertising Campaign – Q4 November Burst, RetailChain LLC",
+    "metadata": {
+      "campaign_id": "cmp_4d82f019",
+      "advertiser": "RetailChain LLC",
+      "channel": "social_media",
+      "budget_type": "cpc",
+      "target_impressions": 500000
+    },
+    "webhook_url": "https://adtech.retailchain.com/events/payment-confirmed"
+  },
+  {
+    "idempotency_key": "edu_2024_python_advanced_masterclass_lifetime",
+    "amount": "299.00",
+    "currency": "USD",
+    "description": "Advanced Python Masterclass – Lifetime Access, cohort 2024-Q4",
+    "metadata": {
+      "student_id": "stu_9c1b4ef3",
+      "course_id": "PY-ADV-301",
+      "cohort": "2024-Q4",
+      "promo": "EARLYBIRD20",
+      "access_type": "lifetime"
+    },
+    "webhook_url": "https://learn.pythonacademy.io/webhooks/checkout"
+  }
+]

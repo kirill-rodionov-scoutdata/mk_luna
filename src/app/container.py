@@ -2,8 +2,8 @@ from dependency_injector import containers, providers
 
 from app.config import settings
 from app.infra.db.session import build_session_factory
-from app.infra.unit_of_work.alchemy import Uow
-from app.infra.messaging.publisher import RabbitMQEventPublisher
+from app.infra.unit_of_work.alchemy import AlchemyUnitOfWork
+from app.infra.rabbitmq.publisher import RabbitMQEventPublisher
 from app.app_layer.services.payment import PaymentService
 
 
@@ -28,7 +28,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     unit_of_work = providers.Factory(
-        Uow,
+        AlchemyUnitOfWork,
         session_factory=session_factory,
     )
 
@@ -36,8 +36,9 @@ class Container(containers.DeclarativeContainer):
 
     # ── Application services ──────────────────────────────────────────────────
 
+    # on_outbox_write is wired in lifespan (main.py) to relay.notify after
+    # the OutboxRelay is created, so the service can wake the relay immediately.
     payment_service = providers.Factory(
         PaymentService,
         uow=unit_of_work,
-        publisher=event_publisher,
     )

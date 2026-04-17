@@ -11,7 +11,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 from app.domain.models.payment import Currency, PaymentStatus
 
@@ -22,7 +22,7 @@ class CreatePaymentRequest(BaseModel):
     amount: Decimal
     currency: Currency
     description: str
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = Field(default_factory=dict)
     webhook_url: HttpUrl
 
 

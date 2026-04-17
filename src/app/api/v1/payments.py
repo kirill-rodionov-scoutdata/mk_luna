@@ -12,9 +12,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from app.api.dependencies import verify_api_key
 from app.api.v1.schemas import CreatePaymentRequest, PaymentCreatedResponse, PaymentDetailResponse
-from app.app_layer.services.payment_service import PaymentService
+from app.app_layer.services.payment import PaymentService
 from app.container import Container
-from app.domain.exceptions import PaymentNotFoundError
+from app.domain.exceptions import DuplicateIdempotencyKeyError, PaymentNotFoundError
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -31,14 +31,17 @@ async def create_payment(
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     payment_service: PaymentService = Depends(Provide[Container.payment_service]),
 ) -> PaymentCreatedResponse:
-    payment = await payment_service.create_payment(
-        idempotency_key=idempotency_key,
-        amount=body.amount,
-        currency=body.currency,
-        description=body.description,
-        metadata=body.metadata,
-        webhook_url=str(body.webhook_url),
-    )
+    try:
+        payment = await payment_service.create_payment(
+            idempotency_key=idempotency_key,
+            amount=body.amount,
+            currency=body.currency,
+            description=body.description,
+            metadata=body.metadata,
+            webhook_url=str(body.webhook_url),
+        )
+    except DuplicateIdempotencyKeyError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     return PaymentCreatedResponse(
         payment_id=payment.id,
         status=payment.status,

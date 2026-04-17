@@ -768,7 +768,8 @@
           <div class="step-body">
             <ul>
               <li>Both <code>uow.payments.add()</code> and <code>uow.outbox.add()</code> happen before
-                <code>await uow.commit()</code></li>
+                <code>await uow.commit()</code>
+              </li>
               <li>Already wired in <code>PaymentService.create_payment()</code> — verify no commit between them</li>
               <li>If broker is down during relay, outbox row stays unpublished; next poll picks it up</li>
             </ul>
@@ -862,7 +863,7 @@
             <ul>
               <li><code>docker-compose up --build</code> — all 4 containers healthy</li>
               <li><code>docker-compose exec api alembic upgrade head</code> — migrations applied</li>
-              <li>Open <code>http://localhost:8000/docs</code> — Swagger shows 2 endpoints</li>
+              <li>Open <code>http://localhost:8002/docs</code> — Swagger shows 2 endpoints</li>
               <li>POST a payment via Swagger with a valid X-API-Key and Idempotency-Key</li>
               <li>Wait 3-7s, GET same payment_id — status should be <code>succeeded</code> or <code>failed</code></li>
               <li>Open <code>http://localhost:15672</code> — RabbitMQ Management, check queue stats</li>

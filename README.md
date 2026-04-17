@@ -23,7 +23,7 @@ docker-compose exec api alembic upgrade head
 
 ## API
 
-Interactive docs: http://localhost:8000/docs
+Interactive docs: http://localhost:8002/docs
 
 All endpoints require the `X-API-Key` header.
 

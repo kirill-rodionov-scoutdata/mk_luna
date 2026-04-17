@@ -1,67 +1,42 @@
 """
 SQLAlchemy implementation of AbstractPaymentRepository.
 
-Maps between the ORM model (PaymentORM) and the domain model (Payment).
+Maps between the ORM model (PaymentORM) and the domain model (PaymentEntity).
 """
 
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.app_layer.interfaces.repositories import AbstractPaymentRepository
-from app.domain.models.payment import Currency, Payment, PaymentStatus
+from app.domain.exceptions import DuplicateIdempotencyKeyError
+from app.domain.models.payment import PaymentEntity
 from app.infra.db.models import PaymentORM
 
 
-def _orm_to_domain(row: PaymentORM) -> Payment:
-    return Payment(
-        id=row.id,
-        amount=row.amount,
-        currency=Currency(row.currency),
-        description=row.description,
-        metadata=row.metadata_,
-        status=PaymentStatus(row.status),
-        idempotency_key=row.idempotency_key,
-        webhook_url=row.webhook_url,
-        created_at=row.created_at,
-        processed_at=row.processed_at,
-    )
-
-
-def _domain_to_orm(payment: Payment) -> PaymentORM:
-    return PaymentORM(
-        id=payment.id,
-        amount=payment.amount,
-        currency=payment.currency.value,
-        description=payment.description,
-        metadata_=payment.metadata,
-        status=payment.status.value,
-        idempotency_key=payment.idempotency_key,
-        webhook_url=payment.webhook_url,
-        created_at=payment.created_at,
-        processed_at=payment.processed_at,
-    )
-
-
-class SqlAlchemyPaymentRepository(AbstractPaymentRepository):
+class PaymentsRepository(AbstractPaymentRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def add(self, payment: Payment) -> None:
-        orm_obj = _domain_to_orm(payment)
-        self._session.add(orm_obj)
+    async def add(self, payment: PaymentEntity) -> None:
+        self._session.add(payment.to_orm())
+        try:
+            await self._session.flush()
+        except IntegrityError:
+            raise DuplicateIdempotencyKeyError(payment.idempotency_key)
 
-    async def get(self, payment_id: uuid.UUID) -> Payment | None:
+    async def get(self, payment_id: uuid.UUID) -> PaymentEntity | None:
         result = await self._session.get(PaymentORM, payment_id)
-        return _orm_to_domain(result) if result else None
+        return PaymentEntity.from_orm(result) if result else None
 
-    async def get_by_idempotency_key(self, key: str) -> Payment | None:
+    async def get_by_idempotency_key(self, key: str) -> PaymentEntity | None:
         stmt = select(PaymentORM).where(PaymentORM.idempotency_key == key)
         result = await self._session.scalar(stmt)
-        return _orm_to_domain(result) if result else None
+        return PaymentEntity.from_orm(result) if result else None
 
-    async def update(self, payment: Payment) -> None:
+    async def update(self, payment: PaymentEntity) -> None:
         stmt = select(PaymentORM).where(PaymentORM.id == payment.id)
         row = await self._session.scalar(stmt)
         if row:

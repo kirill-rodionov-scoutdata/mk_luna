@@ -6,44 +6,39 @@ The container wires concrete implementations at startup.
 """
 
 import uuid
+from collections.abc import Callable
+from decimal import Decimal
 
-from app.app_layer.interfaces.rabbit.event_publisher import AbstractEventPublisher
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
-from app.domain.exceptions import DuplicateIdempotencyKeyError, PaymentNotFoundError
-from app.domain.models.payment import Currency, Payment
+from app.domain.exceptions import PaymentNotFoundError
+from app.domain.models.payment import Currency, PaymentEntity
 
 
 class PaymentService:
     def __init__(
         self,
         uow: AbstractUnitOfWork,
-        publisher: AbstractEventPublisher,
+        on_outbox_write: Callable[[], None] = lambda: None,
     ) -> None:
         self._uow = uow
-        self._publisher = publisher
+        self._on_outbox_write = on_outbox_write
 
     async def create_payment(
         self,
         *,
         idempotency_key: str,
-        amount,
+        amount: Decimal,
         currency: Currency,
         description: str,
         metadata: dict,
         webhook_url: str,
-    ) -> Payment:
-        """
-        Create a new payment and enqueue it for processing.
-
-        Idempotent: returns existing payment if idempotency_key already used.
-        Publishes a 'payments.new' event via the Outbox pattern.
-        """
+    ) -> PaymentEntity:
         async with self._uow as uow:
             existing = await uow.payments.get_by_idempotency_key(idempotency_key)
             if existing:
                 return existing
 
-            payment = Payment(
+            payment = PaymentEntity(
                 amount=amount,
                 currency=currency,
                 description=description,
@@ -60,9 +55,12 @@ class PaymentService:
                 payload={"payment_id": str(payment.id)},
             )
 
+        # Wake up the relay immediately so the event is published without delay
+        self._on_outbox_write()
+
         return payment
 
-    async def get_payment(self, payment_id: uuid.UUID) -> Payment:
+    async def get_payment(self, payment_id: uuid.UUID) -> PaymentEntity:
         """Return a payment by ID. Raises PaymentNotFoundError if absent."""
         async with self._uow as uow:
             payment = await uow.payments.get(payment_id)

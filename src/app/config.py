@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     rabbitmq_host: str = "localhost"
     rabbitmq_port: int = 5672
 
+    # Outbox relay
+    outbox_poll_interval_seconds: int = 5
+
     @property
     def database_url(self) -> str:
         return (

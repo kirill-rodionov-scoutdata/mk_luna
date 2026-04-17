@@ -1,23 +1,41 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.container import Container
-from app.infra.messaging.broker import broker
+from app.infra.rabbitmq.broker import broker
+from app.infra.rabbitmq.outbox_relay import OutboxRelay
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> None:
     """
-    Startup: wire DI container, start RabbitMQ broker.
-    Shutdown: close broker connection.
+    Startup: wire DI container, start RabbitMQ broker, launch outbox relay.
+    Shutdown: cancel relay task, close broker connection.
     """
     container = app.state.container
     container.wire(packages=["app.api"])
 
     await broker.start()
+
+    relay = OutboxRelay(
+        session_factory=container.session_factory(),
+        publisher=container.event_publisher(),
+    )
+    # Wire relay.notify into payment_service so each outbox write wakes the relay immediately
+    container.payment_service.add_kwargs(on_outbox_write=relay.notify)
+    relay_task = asyncio.create_task(relay.run())
+
     yield
+
+    relay_task.cancel()
+    try:
+        await relay_task
+    except asyncio.CancelledError:
+        pass
+
     await broker.close()
 
 

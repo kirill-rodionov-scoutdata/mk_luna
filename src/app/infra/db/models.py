@@ -1,10 +1,3 @@
-"""
-SQLAlchemy ORM mapped classes.
-
-These are persistence models — deliberately separate from the Pydantic domain models.
-Alembic autogenerates migrations from this module.
-"""
-
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -23,11 +16,14 @@ class PaymentORM(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    currency: Mapped[str] = mapped_column(Enum(Currency, name="currency_enum"), nullable=False)
+    currency: Mapped[str] = mapped_column(
+        Enum(Currency, name="currency_enum", values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     description: Mapped[str] = mapped_column(Text, nullable=False)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(
-        Enum(PaymentStatus, name="payment_status_enum"),
+        Enum(PaymentStatus, name="payment_status_enum", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=PaymentStatus.PENDING,
     )
@@ -38,12 +34,7 @@ class PaymentORM(Base):
 
 
 class OutboxORM(Base):
-    """
-    Outbox table for guaranteed event delivery.
-    A background relay reads unpublished rows and publishes them to RabbitMQ.
-    """
-
-    __tablename__ = "outbox"
+    __tablename__ = "outbox_messages"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_type: Mapped[str] = mapped_column(String(255), nullable=False)
