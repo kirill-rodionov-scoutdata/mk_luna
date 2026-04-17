@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.app_layer.interfaces.outbox.relay import AbstractOutboxRelay
+from src.app.app_layer.interfaces.outbox_messages.relay import AbstractOutboxRelay
 from app.app_layer.interfaces.rabbitmq.event_publisher import AbstractEventPublisher
 from app.app_layer.interfaces.repositories import OutboxEventDTO
 from app.config import settings

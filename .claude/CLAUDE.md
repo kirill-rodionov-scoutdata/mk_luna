@@ -1,1 +1,0 @@
-Do not use "while true" in code, never.

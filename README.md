@@ -152,12 +152,77 @@ docker compose logs --since=2m consumer | rg '00000000-0000-0000-0000-0000000000
 
 Ожидается: строка `Received payment event ...` появляется 3 раза, затем ошибка.
 
-## Тесты и линт
+## Тесты и линт (Coverage 91%)
 
 ```bash
 make test
 make lint
 ```
+
+<details>
+<summary><b>Покрытие тестами (Coverage Report)</b></summary>
+
+```text
+Name                                                             Stmts   Miss  Cover   Missing
+----------------------------------------------------------------------------------------------
+src/app/__init__.py                                                  0      0   100%
+src/app/api/__init__.py                                              0      0   100%
+src/app/api/router.py                                                4      0   100%
+src/app/api/v1/__init__.py                                           0      0   100%
+src/app/api/v1/payments.py                                          29      6    79%   53, 72-81
+src/app/app_layer/__init__.py                                        0      0   100%
+src/app/app_layer/interfaces/__init__.py                             0      0   100%
+src/app/app_layer/interfaces/clients/__init__.py                     2      0   100%
+src/app/app_layer/interfaces/clients/webhook.py                      4      0   100%
+src/app/app_layer/interfaces/outbox/relay.py                         8      0   100%
+src/app/app_layer/interfaces/outbox_messages/__init__.py             0      0   100%
+src/app/app_layer/interfaces/outbox_messages/service.py              5      0   100%
+src/app/app_layer/interfaces/payments/__init__.py                    0      0   100%
+src/app/app_layer/interfaces/payments/schemas.py                    46      0   100%
+src/app/app_layer/interfaces/payments/service.py                     8      0   100%
+src/app/app_layer/interfaces/rabbitmq/__init__.py                    0      0   100%
+src/app/app_layer/interfaces/rabbitmq/event_publisher.py             4      0   100%
+src/app/app_layer/interfaces/repositories/__init__.py                3      0   100%
+src/app/app_layer/interfaces/repositories/outbox/__init__.py         0      0   100%
+src/app/app_layer/interfaces/repositories/outbox/dto.py              7      0   100%
+src/app/app_layer/interfaces/repositories/outbox/sql.py             11      0   100%
+src/app/app_layer/interfaces/repositories/payments/__init__.py       2      0   100%
+src/app/app_layer/interfaces/repositories/payments/sql.py           12      0   100%
+src/app/app_layer/interfaces/unit_of_work/__init__.py                2      0   100%
+src/app/app_layer/interfaces/unit_of_work/sql.py                    14      0   100%
+src/app/app_layer/services/__init__.py                               0      0   100%
+src/app/app_layer/services/outbox.py                                53      9    83%   39, 58-64, 71, 83
+src/app/app_layer/services/payment.py                               28      0   100%
+src/app/config.py                                                   44      0   100%
+src/app/container.py                                                16      0   100%
+src/app/domain/__init__.py                                           0      0   100%
+src/app/domain/exceptions.py                                        14      0   100%
+src/app/domain/models/__init__.py                                    0      0   100%
+src/app/domain/models/outbox.py                                      3      0   100%
+src/app/domain/models/payment.py                                    34      0   100%
+src/app/infra/__init__.py                                            0      0   100%
+src/app/infra/clients/__init__.py                                    2      0   100%
+src/app/infra/clients/webhook.py                                    13      0   100%
+src/app/infra/db/__init__.py                                         0      0   100%
+src/app/infra/db/base.py                                             3      0   100%
+src/app/infra/db/models.py                                          29      0   100%
+src/app/infra/db/session.py                                          4      2    50%   5-10
+src/app/infra/rabbitmq/__init__.py                                   0      0   100%
+src/app/infra/rabbitmq/broker.py                                     3      0   100%
+src/app/infra/rabbitmq/consumer.py                                  34     11    68%   53-63, 67-68
+src/app/infra/rabbitmq/exceptions.py                                12      0   100%
+src/app/infra/rabbitmq/outbox_relay.py                              58     15    74%   29, 32-37, 40-41, 44-53, 86-87
+src/app/infra/rabbitmq/publisher.py                                  5      1    80%   7
+src/app/infra/repositories/__init__.py                               0      0   100%
+src/app/infra/repositories/outbox_repository.py                     22      0   100%
+src/app/infra/repositories/payment_repository.py                    30      0   100%
+src/app/infra/unit_of_work/__init__.py                               0      0   100%
+src/app/infra/unit_of_work/alchemy.py                               19      1    95%   24
+src/app/main.py                                                     38     13    66%   17-37
+----------------------------------------------------------------------------------------------
+TOTAL                                                              625     58    91%
+```
+</details>
 
 ## Команды разработки
 
