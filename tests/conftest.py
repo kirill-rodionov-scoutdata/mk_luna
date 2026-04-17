@@ -1,3 +1,6 @@
+import json
+import pathlib
+
 import pytest
 import pytest_asyncio
 from dependency_injector import providers
@@ -8,6 +11,11 @@ from app.config import settings
 from app.main import app
 from tests.environment.publisher import FakePublisher
 from tests.environment.unit_of_work import TestUow
+from tests.satellites import (
+    make_payment_api_body,
+    make_payment_entity,
+    make_payment_service,
+)
 
 
 @pytest_asyncio.fixture(loop_scope="session", scope="session")
@@ -57,3 +65,21 @@ async def client(db_session: AsyncSession, fake_publisher: FakePublisher) -> Asy
                 headers={"X-API-Key": settings.api_key},
             ) as ac:
                 yield ac
+
+
+@pytest.fixture(scope="session")
+def payment_records() -> list[dict]:
+    path = pathlib.Path(__file__).parent / "data" / "payments.json"
+    return json.loads(path.read_text())
+
+
+@pytest.fixture
+def payment_entity(payment_records):
+    """Returns a PaymentEntity built from the first JSON record."""
+    return make_payment_entity(payment_records[0])
+
+
+@pytest.fixture
+def payment_service(db_session):
+    """Returns a PaymentService instance wired with TestUow."""
+    return make_payment_service(TestUow(db_session))

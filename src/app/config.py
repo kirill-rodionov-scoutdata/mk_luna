@@ -1,4 +1,13 @@
+import pathlib
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Build the list of env files: base .env always loaded first;
+# .env.test (if present) is loaded second so its values win — this lets
+# local test runs override POSTGRES_HOST without touching .env or Docker configs.
+_ENV_FILES: tuple[str, ...] = (".env",)
+if pathlib.Path(".env.test").exists():
+    _ENV_FILES = (".env", ".env.test")
 
 
 class Settings(BaseSettings):
@@ -7,7 +16,7 @@ class Settings(BaseSettings):
     All infra components read from this single source of truth.
     """
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILES, extra="ignore")
 
     # Application
     app_env: str = "development"

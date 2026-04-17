@@ -1,4 +1,4 @@
-.PHONY: start stop restart logs clean
+.PHONY: start stop restart logs clean test migrate
 
 # Copy .env from example if it doesn't exist yet
 .env:
@@ -17,3 +17,9 @@ logs:
 
 clean:
 	docker compose down -v --remove-orphans
+
+migrate:
+	POSTGRES_HOST=localhost uv run alembic upgrade head
+
+test:
+	@POSTGRES_HOST=localhost uv run pytest tests/ -v
