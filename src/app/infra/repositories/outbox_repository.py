@@ -29,6 +29,7 @@ class SqlAlchemyOutboxRepository(AbstractOutboxRepository):
             select(OutboxORM)
             .where(OutboxORM.published == False)  # noqa: E712
             .limit(limit)
+            .with_for_update(skip_locked=True)
         )
         rows = (await self._session.scalars(stmt)).all()
         return [

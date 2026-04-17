@@ -37,6 +37,7 @@ class Settings(BaseSettings):
 
     # Outbox relay
     outbox_poll_interval_seconds: int = 5
+    webhook_retry_attempts: int = 3
 
     @property
     def database_url(self) -> str:

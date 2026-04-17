@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from app.app_layer.interfaces.payments.schemas import PaymentOutputDTO
     from app.infra.db.models import PaymentORM
 
 
@@ -65,6 +66,22 @@ class PaymentEntity(BaseModel):
             description=self.description,
             metadata_=self.metadata,
             status=self.status.value,
+            idempotency_key=self.idempotency_key,
+            webhook_url=self.webhook_url,
+            created_at=self.created_at,
+            processed_at=self.processed_at,
+        )
+
+    def to_dto(self) -> "PaymentOutputDTO":
+        from app.app_layer.interfaces.payments.schemas import PaymentOutputDTO
+
+        return PaymentOutputDTO(
+            id=self.id,
+            amount=self.amount,
+            currency=self.currency,
+            description=self.description,
+            metadata=self.metadata,
+            status=self.status,
             idempotency_key=self.idempotency_key,
             webhook_url=self.webhook_url,
             created_at=self.created_at,

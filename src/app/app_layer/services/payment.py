@@ -1,12 +1,15 @@
 import uuid
 from collections.abc import Callable
-from decimal import Decimal
 
+from app.app_layer.interfaces.payments.schemas import (
+    PaymentCreateDTO,
+    PaymentOutputDTO,
+)
 from app.app_layer.interfaces.payments.service import AbstractPaymentService
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
 from app.domain.exceptions import PaymentNotFoundError
 from app.domain.models.outbox import OutboxEventType
-from app.domain.models.payment import Currency, PaymentEntity
+from app.domain.models.payment import PaymentEntity
 
 
 class PaymentService(AbstractPaymentService):
@@ -18,28 +21,19 @@ class PaymentService(AbstractPaymentService):
         self._uow = uow
         self._on_outbox_write = on_outbox_write
 
-    async def create_payment(
-        self,
-        *,
-        idempotency_key: str,
-        amount: Decimal,
-        currency: Currency,
-        description: str,
-        metadata: dict,
-        webhook_url: str,
-    ) -> PaymentEntity:
+    async def create_payment(self, dto: PaymentCreateDTO) -> PaymentOutputDTO:
         async with self._uow as uow:
-            existing = await uow.payments.get_by_idempotency_key(idempotency_key)
+            existing = await uow.payments.get_by_idempotency_key(dto.idempotency_key)
             if existing:
-                return existing
+                return existing.to_dto()
 
             payment = PaymentEntity(
-                amount=amount,
-                currency=currency,
-                description=description,
-                metadata=metadata,
-                idempotency_key=idempotency_key,
-                webhook_url=webhook_url,
+                amount=dto.amount,
+                currency=dto.currency,
+                description=dto.description,
+                metadata=dto.metadata,
+                idempotency_key=dto.idempotency_key,
+                webhook_url=dto.webhook_url,
             )
 
             await uow.payments.add(payment)
@@ -53,9 +47,9 @@ class PaymentService(AbstractPaymentService):
         # Wake up the relay immediately so the event is published without delay
         self._on_outbox_write()
 
-        return payment
+        return payment.to_dto()
 
-    async def get_payment(self, payment_id: uuid.UUID) -> PaymentEntity:
+    async def get_payment(self, payment_id: uuid.UUID) -> PaymentOutputDTO:
         """Return a payment by ID. Raises PaymentNotFoundError if absent."""
         async with self._uow as uow:
             payment = await uow.payments.get(payment_id)
@@ -63,4 +57,4 @@ class PaymentService(AbstractPaymentService):
         if payment is None:
             raise PaymentNotFoundError(str(payment_id))
 
-        return payment
+        return payment.to_dto()

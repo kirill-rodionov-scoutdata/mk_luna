@@ -1,26 +1,19 @@
 import uuid
 from abc import ABC, abstractmethod
-from decimal import Decimal
 
-from app.domain.models.payment import Currency, PaymentEntity
+from app.app_layer.interfaces.payments.schemas import (
+    PaymentCreateDTO,
+    PaymentOutputDTO,
+)
 
 
 class AbstractPaymentService(ABC):
     @abstractmethod
-    async def create_payment(
-        self,
-        *,
-        idempotency_key: str,
-        amount: Decimal,
-        currency: Currency,
-        description: str,
-        metadata: dict,
-        webhook_url: str,
-    ) -> PaymentEntity:
+    async def create_payment(self, dto: PaymentCreateDTO) -> PaymentOutputDTO:
         """Create a new payment."""
         ...
 
     @abstractmethod
-    async def get_payment(self, payment_id: uuid.UUID) -> PaymentEntity:
+    async def get_payment(self, payment_id: uuid.UUID) -> PaymentOutputDTO:
         """Get a payment by ID."""
         ...

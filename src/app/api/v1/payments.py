@@ -16,9 +16,14 @@ from app.api.v1.schemas import (
     PaymentCreatedResponse,
     PaymentDetailResponse,
 )
+from app.app_layer.interfaces.payments.schemas import PaymentCreateDTO
 from app.app_layer.services.payment import PaymentService
 from app.container import Container
-from app.domain.exceptions import DuplicateIdempotencyKeyError, PaymentNotFoundError
+from app.domain.exceptions import (
+    DomainError,
+    DuplicateIdempotencyKeyError,
+    PaymentNotFoundError,
+)
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -36,7 +41,7 @@ async def create_payment(
     payment_service: PaymentService = Depends(Provide[Container.payment_service]),
 ) -> PaymentCreatedResponse:
     try:
-        payment = await payment_service.create_payment(
+        dto = PaymentCreateDTO(
             idempotency_key=idempotency_key,
             amount=body.amount,
             currency=body.currency,
@@ -44,9 +49,14 @@ async def create_payment(
             metadata=body.metadata,
             webhook_url=str(body.webhook_url),
         )
+        payment = await payment_service.create_payment(dto)
     except DuplicateIdempotencyKeyError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except DomainError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
     return PaymentCreatedResponse(
         payment_id=payment.id,
@@ -70,6 +80,10 @@ async def get_payment(
     except PaymentNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except DomainError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
 
     return PaymentDetailResponse(

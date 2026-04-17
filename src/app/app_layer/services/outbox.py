@@ -2,8 +2,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-import httpx
-
+from app.app_layer.interfaces.clients.webhook import AbstractWebhookClient
 from app.app_layer.interfaces.outbox_messages.service import AbstractOutboxService
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
 from app.domain.exceptions import PaymentNotFoundError
@@ -13,8 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 class OutboxService(AbstractOutboxService):
-    def __init__(self, uow: AbstractUnitOfWork) -> None:
+    def __init__(
+        self,
+        uow: AbstractUnitOfWork,
+        webhook_client: AbstractWebhookClient,
+    ) -> None:
         self._uow = uow
+        self._webhook_client = webhook_client
 
     async def process_payment(self, payment_id: uuid.UUID) -> None:
         """
@@ -70,11 +74,9 @@ class OutboxService(AbstractOutboxService):
             "idempotency_key": payment.idempotency_key,
         }
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    payment.webhook_url, json=payload, timeout=10.0
-                )
-                response.raise_for_status()
+            await self._webhook_client.send_notification(
+                url=payment.webhook_url, payload=payload
+            )
         except Exception as exc:
             logger.error(
                 "Failed to send webhook for payment %s to %s: %s",
