@@ -1,22 +1,15 @@
-"""
-Payment endpoints.
-
-POST /api/v1/payments       → create payment (idempotent)
-GET  /api/v1/payments/{id}  → get payment details
-"""
-
 import uuid
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from app.api.dependencies import verify_api_key
-from app.api.v1.schemas import (
+from app.app_layer.interfaces.payments.schemas import (
     CreatePaymentRequest,
     PaymentCreatedResponse,
+    PaymentCreateDTO,
     PaymentDetailResponse,
 )
-from app.app_layer.interfaces.payments.schemas import PaymentCreateDTO
 from app.app_layer.services.payment import PaymentService
 from app.container import Container
 from app.domain.exceptions import (

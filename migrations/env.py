@@ -19,7 +19,7 @@ from app.infra.db.base import Base
 import app.infra.db.models  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.database.url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -46,7 +46,7 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations() -> None:
-    engine = create_async_engine(settings.database_url)
+    engine = create_async_engine(settings.database.url)
     async with engine.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await engine.dispose()

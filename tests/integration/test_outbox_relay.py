@@ -1,5 +1,7 @@
+from typing import Any
+
 import pytest
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 from app.domain.models.outbox import OutboxEventType
 from app.infra.db.models import OutboxORM
@@ -9,10 +11,14 @@ from tests.environment.publisher import FakePublisher
 
 
 @pytest.mark.asyncio
-async def test_outbox_relay_publishes_and_marks_events(engine, db_session, fake_publisher, payment_records):
+async def test_outbox_relay_publishes_and_marks_events(
+    engine: AsyncEngine,
+    fake_publisher: FakePublisher,
+    payment_records: list[dict[str, Any]],
+) -> None:
     session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
     relay = OutboxRelay(session_factory=session_factory, publisher=fake_publisher)
-    payload = {"payment_id": payment_records[0]["idempotency_key"]}
+    payload: dict[str, Any] = {"payment_id": payment_records[0]["idempotency_key"]}
 
     async with AlchemyUnitOfWork(session_factory) as uow:
         await uow.outbox.add(event_type=OutboxEventType.PAYMENTS_NEW, payload=payload)
@@ -27,7 +33,9 @@ async def test_outbox_relay_publishes_and_marks_events(engine, db_session, fake_
 
     async with session_factory() as session:
         result = await session.execute(
-            OutboxORM.__table__.select().where(OutboxORM.payload["payment_id"].astext == payload["payment_id"])
+            OutboxORM.__table__.select().where(
+                OutboxORM.payload["payment_id"].astext == payload["payment_id"]
+            )
         )
         row = result.fetchone()
         assert row is not None

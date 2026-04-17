@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class WebhookClient(AbstractWebhookClient):
     @retry(
-        stop=stop_after_attempt(settings.webhook_retry_attempts),
+        stop=stop_after_attempt(settings.webhook.retry_attempts),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
         reraise=True,

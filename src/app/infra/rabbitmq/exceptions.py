@@ -1,12 +1,3 @@
-"""
-Exceptions for the infra messaging layer.
-
-These represent infrastructure-level failures that can occur during outbox
-event relay. They are deliberately separate from domain exceptions — a broker
-being temporarily unavailable is not a business rule violation.
-"""
-
-
 class MessagingError(Exception):
     """Base for all messaging infrastructure errors."""
 

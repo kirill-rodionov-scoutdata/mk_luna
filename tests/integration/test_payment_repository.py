@@ -1,17 +1,21 @@
 import uuid
+from typing import Any
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.exceptions import DuplicateIdempotencyKeyError
 from app.domain.models.outbox import OutboxEventType
-from app.domain.models.payment import PaymentStatus
+from app.domain.models.payment import PaymentEntity, PaymentStatus
 from app.infra.repositories.outbox_repository import SqlAlchemyOutboxRepository
 from app.infra.repositories.payment_repository import PaymentsRepository
 from tests.satellites import make_payment_entity
 
 
-async def test_add_and_get_payment(db_session, payment_entity):
-
+async def test_add_and_get_payment(
+    db_session: AsyncSession,
+    payment_entity: PaymentEntity,
+) -> None:
     repo = PaymentsRepository(db_session)
 
     await repo.add(payment_entity)
@@ -24,8 +28,7 @@ async def test_add_and_get_payment(db_session, payment_entity):
     assert fetched.currency == payment_entity.currency
 
 
-async def test_get_returns_none_for_unknown_id(db_session):
-
+async def test_get_returns_none_for_unknown_id(db_session: AsyncSession) -> None:
     repo = PaymentsRepository(db_session)
 
     result = await repo.get(uuid.uuid4())
@@ -33,8 +36,10 @@ async def test_get_returns_none_for_unknown_id(db_session):
     assert result is None
 
 
-async def test_get_by_idempotency_key(db_session, payment_entity):
-
+async def test_get_by_idempotency_key(
+    db_session: AsyncSession,
+    payment_entity: PaymentEntity,
+) -> None:
     repo = PaymentsRepository(db_session)
     await repo.add(payment_entity)
     await db_session.flush()
@@ -45,8 +50,9 @@ async def test_get_by_idempotency_key(db_session, payment_entity):
     assert fetched.id == payment_entity.id
 
 
-async def test_get_by_idempotency_key_returns_none_if_missing(db_session):
-
+async def test_get_by_idempotency_key_returns_none_if_missing(
+    db_session: AsyncSession,
+) -> None:
     repo = PaymentsRepository(db_session)
 
     result = await repo.get_by_idempotency_key("nonexistent-key")
@@ -54,13 +60,14 @@ async def test_get_by_idempotency_key_returns_none_if_missing(db_session):
     assert result is None
 
 
-async def test_update_payment_status(db_session, payment_entity):
-
+async def test_update_payment_status(
+    db_session: AsyncSession,
+    payment_entity: PaymentEntity,
+) -> None:
     repo = PaymentsRepository(db_session)
     await repo.add(payment_entity)
     await db_session.flush()
 
-    # Update status
     payment_entity = payment_entity.model_copy(
         update={"status": PaymentStatus.SUCCEEDED}
     )
@@ -72,28 +79,26 @@ async def test_update_payment_status(db_session, payment_entity):
     assert fetched.status == PaymentStatus.SUCCEEDED
 
 
-async def test_idempotency_key_unique_constraint(db_session, payment_records):
-    """
-    PaymentsRepository.add() catches the DB IntegrityError and re-raises
-    the domain-level DuplicateIdempotencyKeyError. Verify that contract.
-    """
+async def test_idempotency_key_unique_constraint(
+    db_session: AsyncSession,
+    payment_records: list[dict[str, Any]],
+) -> None:
     repo = PaymentsRepository(db_session)
     record = payment_records[0]
     p1 = make_payment_entity(record)
     p2 = make_payment_entity(record)
 
-    # First insert succeeds
     await repo.add(p1)
 
-    # Second insert with same idempotency_key must raise the domain exception
     with pytest.raises(DuplicateIdempotencyKeyError):
         await repo.add(p2)
 
 
-async def test_payment_metadata_stored_as_jsonb(db_session, payment_records):
-
+async def test_payment_metadata_stored_as_jsonb(
+    db_session: AsyncSession,
+    payment_records: list[dict[str, Any]],
+) -> None:
     repo = PaymentsRepository(db_session)
-    # Using record 4 which has specific metadata
     record = payment_records[4]
     payment = make_payment_entity(record)
 
@@ -104,8 +109,7 @@ async def test_payment_metadata_stored_as_jsonb(db_session, payment_records):
     assert fetched.metadata == record["metadata"]
 
 
-async def test_outbox_add_and_get_unpublished(db_session):
-
+async def test_outbox_add_and_get_unpublished(db_session: AsyncSession) -> None:
     repo = SqlAlchemyOutboxRepository(db_session)
 
     await repo.add(OutboxEventType.PAYMENTS_NEW, {"payment_id": str(uuid.uuid4())})
@@ -116,7 +120,7 @@ async def test_outbox_add_and_get_unpublished(db_session):
     assert events[-1].event_type == OutboxEventType.PAYMENTS_NEW
 
 
-async def test_outbox_mark_published(db_session):
+async def test_outbox_mark_published(db_session: AsyncSession) -> None:
     repo = SqlAlchemyOutboxRepository(db_session)
     payment_id = str(uuid.uuid4())
 

@@ -1,9 +1,3 @@
-"""
-Top-level API router.
-
-Aggregates all versioned routers and mounts them under /api/v1 (prefix set in main.py).
-"""
-
 from fastapi import APIRouter
 
 from app.api.v1.payments import router as payments_router

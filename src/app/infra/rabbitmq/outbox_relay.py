@@ -24,25 +24,22 @@ class OutboxRelay:
         self.wakeup = asyncio.Event()
 
     def notify(self) -> None:
-        """Wake up the relay immediately after an outbox write."""
         self.wakeup.set()
 
     async def run(self) -> None:
-        """Long-running coroutine — run via asyncio.create_task in lifespan."""
         logger.info(
             "Outbox relay started (poll interval: %ds)",
-            settings.outbox_poll_interval_seconds,
+            settings.outbox.poll_interval_seconds,
         )
         async for _ in self.poll_ticks():
             await self.process_batch()
 
     async def poll_ticks(self) -> AsyncIterator[None]:
-        """Async generator — yields on wakeup signal or timeout, no sleep."""
         while True:
             try:
                 await asyncio.wait_for(
                     self.wakeup.wait(),
-                    timeout=settings.outbox_poll_interval_seconds,
+                    timeout=settings.outbox.poll_interval_seconds,
                 )
             except TimeoutError:
                 pass
@@ -50,7 +47,6 @@ class OutboxRelay:
             yield
 
     async def process_batch(self) -> None:
-        """Fetch one batch of unpublished events and attempt to relay each one."""
         async with AlchemyUnitOfWork(self.session_factory) as uow:
             events = await uow.outbox.get_unpublished(limit=100)
 
@@ -59,7 +55,7 @@ class OutboxRelay:
                 await self.publish_event(event)
             except OutboxPublishError as exc:
                 logger.warning("%s", exc)
-                continue  # leave unpublished; next poll will retry
+                continue
 
             try:
                 await self.mark_published(event)

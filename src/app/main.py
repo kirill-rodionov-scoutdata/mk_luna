@@ -11,10 +11,6 @@ from app.infra.rabbitmq.outbox_relay import OutboxRelay
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> None:
-    """
-    Startup: wire DI container, start RabbitMQ broker, launch outbox relay.
-    Shutdown: cancel relay task, close broker connection.
-    """
     container = app.state.container
     container.wire(packages=["app.api"])
 
@@ -24,7 +20,6 @@ async def lifespan(app: FastAPI) -> None:
         session_factory=container.session_factory(),
         publisher=container.event_publisher(),
     )
-    # Wire relay.notify into payment_service so each outbox write wakes the relay immediately
     container.payment_service.add_kwargs(on_outbox_write=relay.notify)
     relay_task = asyncio.create_task(relay.run())
 

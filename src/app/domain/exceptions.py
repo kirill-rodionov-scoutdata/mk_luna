@@ -1,11 +1,3 @@
-"""
-Domain exceptions.
-
-All exceptions raised within the domain/app_layer stay framework-agnostic.
-The API layer maps these to appropriate HTTP responses.
-"""
-
-
 class DomainError(Exception):
     """Base for all domain errors."""
 

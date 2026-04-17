@@ -1,5 +1,6 @@
 import uuid
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -8,15 +9,15 @@ from tests.satellites import make_payment_api_body
 
 
 @pytest.fixture
-def payment_body(payment_records):
-    """Returns a valid payment API body from the first record."""
+def payment_body(payment_records: list[dict[str, Any]]) -> dict[str, Any]:
     return make_payment_api_body(payment_records[0])
 
 
 async def test_create_payment_returns_202(
-    client: AsyncClient, payment_body, payment_records
-):
-
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+    payment_records: list[dict[str, Any]],
+) -> None:
     headers = {"Idempotency-Key": payment_records[0]["idempotency_key"]}
 
     resp = await client.post(
@@ -33,9 +34,10 @@ async def test_create_payment_returns_202(
 
 
 async def test_create_payment_idempotent_returns_same_id(
-    client: AsyncClient, payment_body, payment_records
-):
-
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+    payment_records: list[dict[str, Any]],
+) -> None:
     record = payment_records[0]
     headers = {"Idempotency-Key": record["idempotency_key"]}
 
@@ -47,10 +49,10 @@ async def test_create_payment_idempotent_returns_same_id(
     assert first.json()["payment_id"] == second.json()["payment_id"]
 
 
-async def test_create_payment_requires_api_key(client: AsyncClient, payment_body):
-    # Act
-    # We use a separate client without the default API key header for this test
-    # or just override the header in the request.
+async def test_create_payment_requires_api_key(
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+) -> None:
     resp = await client.post(
         "/api/v1/payments",
         json=payment_body,
@@ -60,8 +62,10 @@ async def test_create_payment_requires_api_key(client: AsyncClient, payment_body
     assert resp.status_code == 401
 
 
-async def test_create_payment_wrong_api_key(client: AsyncClient, payment_body):
-    # Act
+async def test_create_payment_wrong_api_key(
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+) -> None:
     resp = await client.post(
         "/api/v1/payments",
         json=payment_body,
@@ -71,18 +75,20 @@ async def test_create_payment_wrong_api_key(client: AsyncClient, payment_body):
     assert resp.status_code == 401
 
 
-async def test_create_payment_missing_body_fields(client: AsyncClient):
+async def test_create_payment_missing_body_fields(client: AsyncClient) -> None:
     resp = await client.post(
         "/api/v1/payments",
-        json={"amount": "10.00"},  # missing required fields
+        json={"amount": "10.00"},
         headers={"Idempotency-Key": "key-bad-body"},
     )
 
     assert resp.status_code == 422
 
 
-async def test_create_payment_invalid_currency(client: AsyncClient, payment_body):
-
+async def test_create_payment_invalid_currency(
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+) -> None:
     bad_body = {**payment_body, "currency": "MOON"}
 
     resp = await client.post(
@@ -95,9 +101,10 @@ async def test_create_payment_invalid_currency(client: AsyncClient, payment_body
 
 
 async def test_create_payment_triggers_publisher(
-    client: AsyncClient, payment_body, payment_records
-):
-
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+    payment_records: list[dict[str, Any]],
+) -> None:
     headers = {"Idempotency-Key": payment_records[1]["idempotency_key"]}
 
     resp = await client.post(
@@ -109,15 +116,11 @@ async def test_create_payment_triggers_publisher(
     assert resp.status_code == 202
 
 
-# ---------------------------------------------------------------------------
-# GET /api/v1/payments/{id}
-# ---------------------------------------------------------------------------
-
-
 async def test_get_payment_returns_200(
-    client: AsyncClient, payment_body, payment_records
-):
-
+    client: AsyncClient,
+    payment_body: dict[str, Any],
+    payment_records: list[dict[str, Any]],
+) -> None:
     record = payment_records[0]
     create_resp = await client.post(
         "/api/v1/payments",
@@ -137,15 +140,13 @@ async def test_get_payment_returns_200(
     assert body["idempotency_key"] == record["idempotency_key"]
 
 
-async def test_get_payment_not_found(client: AsyncClient):
-
+async def test_get_payment_not_found(client: AsyncClient) -> None:
     resp = await client.get(f"/api/v1/payments/{uuid.uuid4()}")
 
     assert resp.status_code == 404
 
 
-async def test_get_payment_requires_api_key(client: AsyncClient):
-
+async def test_get_payment_requires_api_key(client: AsyncClient) -> None:
     resp = await client.get(
         f"/api/v1/payments/{uuid.uuid4()}",
         headers={"X-API-Key": "bad"},
@@ -154,9 +155,11 @@ async def test_get_payment_requires_api_key(client: AsyncClient):
     assert resp.status_code == 401
 
 
-async def test_get_payment_returns_metadata(client: AsyncClient, payment_records):
-
-    record = payment_records[2]  # Record with rich metadata
+async def test_get_payment_returns_metadata(
+    client: AsyncClient,
+    payment_records: list[dict[str, Any]],
+) -> None:
+    record = payment_records[2]
     body = make_payment_api_body(record)
     create_resp = await client.post(
         "/api/v1/payments",

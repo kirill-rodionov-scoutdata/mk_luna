@@ -38,19 +38,16 @@ class PaymentService(AbstractPaymentService):
 
             await uow.payments.add(payment)
 
-            # Outbox: write event atomically with the payment record
             await uow.outbox.add(
                 event_type=OutboxEventType.PAYMENTS_NEW,
                 payload={"payment_id": str(payment.id)},
             )
 
-        # Wake up the relay immediately so the event is published without delay
         self._on_outbox_write()
 
         return payment.to_dto()
 
     async def get_payment(self, payment_id: uuid.UUID) -> PaymentOutputDTO:
-        """Return a payment by ID. Raises PaymentNotFoundError if absent."""
         async with self._uow as uow:
             payment = await uow.payments.get(payment_id)
 

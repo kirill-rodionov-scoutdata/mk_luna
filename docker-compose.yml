@@ -31,28 +31,11 @@ services:
       timeout: 5s
       retries: 5
 
-  migrate:
-    build:
-      context: .
-      target: runtime
-    command: alembic upgrade head
-    env_file: .env
-    environment:
-      PYTHONPATH: /app/src
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./src:/app/src
-      - ./migrations:/app/migrations
-      - ./alembic.ini:/app/alembic.ini
-    restart: "no"
-
   api:
     build:
       context: .
       target: runtime
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload"
     env_file: .env
     environment:
       PYTHONPATH: /app/src
@@ -63,11 +46,10 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     volumes:
       - ./src:/app/src
       - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
 
   consumer:
     build:
@@ -82,8 +64,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     volumes:
       - ./src:/app/src
 

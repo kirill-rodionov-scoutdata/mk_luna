@@ -1,7 +1,3 @@
-"""
-Domain model for Payment.
-"""
-
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -43,6 +39,7 @@ class PaymentEntity(BaseModel):
 
     @classmethod
     def from_orm(cls, row: "PaymentORM") -> "PaymentEntity":
+
         return cls(
             id=row.id,
             amount=row.amount,

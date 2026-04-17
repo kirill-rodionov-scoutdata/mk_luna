@@ -49,7 +49,6 @@ class OutboxService(AbstractOutboxService):
             payment.processed_at = datetime.now(UTC)
             await uow.payments.update(payment)
 
-        # Trigger notification after DB update
         await self.send_webhook_notification(payment)
 
     async def _simulate_external_gate_processing(self) -> None:

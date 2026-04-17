@@ -14,7 +14,7 @@ class Container(containers.DeclarativeContainer):
 
     session_factory = providers.Singleton(
         build_session_factory,
-        database_url=settings.database_url,
+        database_url=settings.database.url,
     )
 
     unit_of_work = providers.Factory(
@@ -23,7 +23,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     event_publisher = providers.Singleton(RabbitMQEventPublisher)
-    
+
     webhook_client = providers.Singleton(WebhookClient)
 
     payment_service = providers.Factory(
