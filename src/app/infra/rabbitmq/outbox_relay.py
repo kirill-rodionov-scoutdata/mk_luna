@@ -2,14 +2,12 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
-from src.app.app_layer.interfaces.outbox_messages.relay import AbstractOutboxRelay
+from app.app_layer.interfaces.outbox_messages.relay import AbstractOutboxRelay
 from app.app_layer.interfaces.rabbitmq.event_publisher import AbstractEventPublisher
 from app.app_layer.interfaces.repositories import OutboxEventDTO
+from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
 from app.config import settings
 from app.infra.rabbitmq.exceptions import OutboxPersistenceError, OutboxPublishError
-from app.infra.unit_of_work.alchemy import UnitOfWork
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +15,10 @@ logger = logging.getLogger(__name__)
 class OutboxRelay(AbstractOutboxRelay):
     def __init__(
         self,
-        session_factory: async_sessionmaker[AsyncSession],
+        uow: AbstractUnitOfWork,
         publisher: AbstractEventPublisher,
     ) -> None:
-        self.uow = UnitOfWork(session_factory)
+        self.uow = uow
         self.publisher = publisher
         self.wakeup = asyncio.Event()
         self._running = True

@@ -5,6 +5,7 @@ from app.app_layer.services.payment import PaymentService
 from app.config import settings
 from app.infra.clients.webhook import WebhookClient
 from app.infra.db.session import build_session_factory
+from app.infra.rabbitmq.outbox_relay import OutboxRelay
 from app.infra.rabbitmq.publisher import RabbitMQEventPublisher
 from app.infra.unit_of_work.alchemy import UnitOfWork
 
@@ -35,4 +36,10 @@ class Container(containers.DeclarativeContainer):
         OutboxService,
         uow=unit_of_work,
         webhook_client=webhook_client,
+    )
+
+    outbox_relay = providers.Singleton(
+        OutboxRelay,
+        uow=unit_of_work,
+        publisher=event_publisher,
     )

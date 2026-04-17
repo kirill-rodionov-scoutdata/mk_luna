@@ -9,7 +9,6 @@ from app.api.router import api_router
 from app.config import settings
 from app.container import Container
 from app.infra.rabbitmq.broker import broker
-from app.infra.rabbitmq.outbox_relay import OutboxRelay
 
 
 @asynccontextmanager
@@ -19,10 +18,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     await broker.start()
 
-    relay = OutboxRelay(
-        session_factory=container.session_factory(),
-        publisher=container.event_publisher(),
-    )
+    relay = container.outbox_relay()
     container.payment_service.add_kwargs(on_outbox_write=relay.notify)
     relay_task = asyncio.create_task(relay.run())
 

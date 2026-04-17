@@ -8,6 +8,7 @@ from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import PaymentStatus
 from app.infra.db.models import OutboxORM, PaymentORM
 from app.infra.rabbitmq.outbox_relay import OutboxRelay
+from app.infra.unit_of_work.alchemy import UnitOfWork
 from tests.environment.publisher import FakePublisher
 
 
@@ -44,7 +45,8 @@ async def test_full_payment_flow(
     assert outbox_row is not None
     assert outbox_row.published is False
 
-    relay = OutboxRelay(session_factory=mock_session_factory, publisher=fake_publisher)
+    uow = UnitOfWork(session_factory=mock_session_factory)
+    relay = OutboxRelay(uow=uow, publisher=fake_publisher)
     await relay.process_batch()
 
     assert len(fake_publisher.published_messages) == 1

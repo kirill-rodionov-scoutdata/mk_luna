@@ -32,7 +32,8 @@ async def test_outbox_relay_publishes_and_marks_events(
         expire_on_commit=False,
         join_transaction_mode="create_savepoint",
     )
-    relay = OutboxRelay(session_factory=session_factory, publisher=fake_publisher)
+    uow = UnitOfWork(session_factory=session_factory)
+    relay = OutboxRelay(uow=uow, publisher=fake_publisher)
     payload: dict[str, Any] = {"payment_id": payment_records[0]["idempotency_key"]}
 
     async with UnitOfWork(session_factory) as uow:
@@ -68,7 +69,8 @@ async def test_outbox_relay_skips_event_when_publish_fails(
         join_transaction_mode="create_savepoint",
     )
     failing_publisher = FailingPublisher()
-    relay = OutboxRelay(session_factory=session_factory, publisher=failing_publisher)
+    uow = UnitOfWork(session_factory=session_factory)
+    relay = OutboxRelay(uow=uow, publisher=failing_publisher)
     payload: dict[str, Any] = {"payment_id": payment_records[1]["idempotency_key"]}
 
     async with UnitOfWork(session_factory) as uow:
@@ -101,7 +103,8 @@ async def test_outbox_relay_does_not_mark_published_when_db_fails(
         expire_on_commit=False,
         join_transaction_mode="create_savepoint",
     )
-    relay = OutboxRelay(session_factory=session_factory, publisher=fake_publisher)
+    uow = UnitOfWork(session_factory=session_factory)
+    relay = OutboxRelay(uow=uow, publisher=fake_publisher)
     payment_id = payment_records[2]["idempotency_key"]
     payload: dict[str, Any] = {"payment_id": payment_id}
 
