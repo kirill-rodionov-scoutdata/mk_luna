@@ -13,11 +13,18 @@ from app.container import Container
 logger = logging.getLogger(__name__)
 
 # DLQ Configuration
-dlq_exchange = RabbitExchange(settings.rabbitmq.dlx_name, type=ExchangeType.DIRECT)
-dlq_queue = RabbitQueue(settings.rabbitmq.payments_dlq_name)
+dlq_exchange = RabbitExchange(
+    settings.rabbitmq.dlx_name, type=ExchangeType.DIRECT, durable=True
+)
+dlq_queue = RabbitQueue(
+    settings.rabbitmq.payments_dlq_name,
+    durable=True,
+    routing_key=settings.rabbitmq.payments_queue_name,
+)
 
 payments_queue = RabbitQueue(
     settings.rabbitmq.payments_queue_name,
+    durable=True,
     arguments={
         "x-dead-letter-exchange": dlq_exchange.name,
     },
@@ -47,6 +54,10 @@ async def main() -> None:
     container.wire(modules=[__name__])
 
     async with broker:
+        declared_dlx = await broker.declare_exchange(dlq_exchange)
+        declared_dlq = await broker.declare_queue(dlq_queue)
+        await declared_dlq.bind(declared_dlx, routing_key=dlq_queue.routing_key)
+
         await broker.start()
         logger.info("Consumer started, waiting for messages...")
         await asyncio.Future()

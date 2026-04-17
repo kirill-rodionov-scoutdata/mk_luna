@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.app_layer.interfaces.payments.schemas import PaymentCreateDTO
 from app.app_layer.services.payment import PaymentService
-from app.domain.exceptions import PaymentNotFoundError
+from app.domain.exceptions import DuplicateIdempotencyKeyError, PaymentNotFoundError
 from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import Currency, PaymentStatus
 from tests.environment.unit_of_work import TestUow
@@ -53,7 +53,7 @@ async def test_create_payment_persists_to_repository(
     assert stored.id == payment.id
 
 
-async def test_create_payment_is_idempotent(
+async def test_create_payment_duplicate_idempotency_key_raises_conflict(
     payment_service: PaymentService,
     payment_records: list[dict[str, Any]],
 ) -> None:
@@ -64,10 +64,9 @@ async def test_create_payment_is_idempotent(
         "currency": Currency(record["currency"]),
     }
 
-    first = await payment_service.create_payment(PaymentCreateDTO(**kwargs))
-    second = await payment_service.create_payment(PaymentCreateDTO(**kwargs))
-
-    assert first.id == second.id
+    await payment_service.create_payment(PaymentCreateDTO(**kwargs))
+    with pytest.raises(DuplicateIdempotencyKeyError):
+        await payment_service.create_payment(PaymentCreateDTO(**kwargs))
 
 
 async def test_create_payment_adds_outbox_event(
@@ -91,7 +90,7 @@ async def test_create_payment_adds_outbox_event(
     assert events[0].payload == {"payment_id": str(payment.id)}
 
 
-async def test_create_payment_idempotent_does_not_add_extra_outbox_event(
+async def test_create_payment_duplicate_idempotency_does_not_add_extra_outbox_event(
     db_session: AsyncSession,
     payment_service: PaymentService,
     payment_records: list[dict[str, Any]],
@@ -104,7 +103,8 @@ async def test_create_payment_idempotent_does_not_add_extra_outbox_event(
     }
 
     await payment_service.create_payment(PaymentCreateDTO(**kwargs))
-    await payment_service.create_payment(PaymentCreateDTO(**kwargs))
+    with pytest.raises(DuplicateIdempotencyKeyError):
+        await payment_service.create_payment(PaymentCreateDTO(**kwargs))
 
     async with TestUow(db_session) as uow:
         events = await uow.outbox.get_unpublished()

@@ -16,3 +16,12 @@ class DuplicateIdempotencyKeyError(DomainError):
     def __init__(self, key: str) -> None:
         super().__init__(f"Payment with idempotency key '{key}' already exists.")
         self.key = key
+
+
+class PaymentProcessingError(DomainError):
+    """Raised when payment processing fails and should be retried by broker."""
+
+    def __init__(self, payment_id: str, reason: str) -> None:
+        super().__init__(f"Payment '{payment_id}' processing failed: {reason}")
+        self.payment_id = payment_id
+        self.reason = reason

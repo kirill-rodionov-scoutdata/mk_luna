@@ -2,8 +2,6 @@ import uuid
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-
-from app.api.dependencies import verify_api_key
 from app.app_layer.interfaces.payments.schemas import (
     CreatePaymentRequest,
     PaymentCreatedResponse,
@@ -18,7 +16,7 @@ from app.domain.exceptions import (
     PaymentNotFoundError,
 )
 
-router = APIRouter(dependencies=[Depends(verify_api_key)])
+router = APIRouter()
 
 
 @router.post(

@@ -8,7 +8,7 @@ from dependency_injector import providers
 from faststream.rabbit.testing import TestRabbitBroker
 
 from app.container import Container
-from app.infra.rabbitmq.consumer import broker, payments_queue
+from app.infra.rabbitmq.consumer import broker, dlq_exchange, dlq_queue, payments_queue
 
 
 @pytest.fixture
@@ -55,3 +55,9 @@ async def test_consumer_propagates_service_exception(
     with pytest.raises(Exception, match="service failure"):
         async with TestRabbitBroker(broker) as tb:
             await tb.publish({"payment_id": payment_id}, queue=payments_queue)
+
+
+def test_payments_queue_dead_letter_routing_is_configured() -> None:
+    assert payments_queue.arguments is not None
+    assert payments_queue.arguments["x-dead-letter-exchange"] == dlq_exchange.name
+    assert dlq_queue.routing_key == payments_queue.name

@@ -37,7 +37,7 @@ async def test_create_payment_returns_202(
     assert "created_at" in body
 
 
-async def test_create_payment_idempotent_returns_same_id(
+async def test_create_payment_duplicate_idempotency_returns_409(
     client: AsyncClient,
     payment_body: dict[str, Any],
     payment_records: list[dict[str, Any]],
@@ -49,8 +49,8 @@ async def test_create_payment_idempotent_returns_same_id(
     second = await client.post("/api/v1/payments", json=payment_body, headers=headers)
 
     assert first.status_code == 202
-    assert second.status_code == 202
-    assert first.json()["payment_id"] == second.json()["payment_id"]
+    assert second.status_code == 409
+    assert record["idempotency_key"] in second.json()["detail"]
 
 
 async def test_create_payment_requires_api_key(

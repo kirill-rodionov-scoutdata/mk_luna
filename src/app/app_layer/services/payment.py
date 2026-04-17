@@ -7,7 +7,7 @@ from app.app_layer.interfaces.payments.schemas import (
 )
 from app.app_layer.interfaces.payments.service import AbstractPaymentService
 from app.app_layer.interfaces.unit_of_work.sql import AbstractUnitOfWork
-from app.domain.exceptions import PaymentNotFoundError
+from app.domain.exceptions import DuplicateIdempotencyKeyError, PaymentNotFoundError
 from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import PaymentEntity
 
@@ -25,7 +25,7 @@ class PaymentService(AbstractPaymentService):
         async with self._uow as uow:
             existing = await uow.payments.get_by_idempotency_key(dto.idempotency_key)
             if existing:
-                return existing.to_dto()
+                raise DuplicateIdempotencyKeyError(dto.idempotency_key)
 
             payment = PaymentEntity(
                 amount=dto.amount,

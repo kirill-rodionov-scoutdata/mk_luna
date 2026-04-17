@@ -2,9 +2,11 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
+from app.config import settings
 from app.container import Container
 from app.infra.rabbitmq.broker import broker
 from app.infra.rabbitmq.outbox_relay import OutboxRelay
@@ -43,6 +45,17 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    @application.middleware("http")
+    async def api_key_middleware(request: Request, call_next):
+        if request.url.path.startswith("/api/v1"):
+            if request.headers.get("X-API-Key") != settings.api.api_key:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid or missing API key."},
+                )
+        return await call_next(request)
+
     application.state.container = container
     application.include_router(api_router, prefix="/api/v1")
 

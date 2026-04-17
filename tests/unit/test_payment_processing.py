@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.app_layer.interfaces.payments.schemas import PaymentCreateDTO
 from app.app_layer.services.outbox import OutboxService
 from app.app_layer.services.payment import PaymentService
+from app.domain.exceptions import PaymentProcessingError
 from app.domain.models.payment import Currency, PaymentStatus
 from tests.environment.unit_of_work import TestUow
 
@@ -64,15 +65,16 @@ async def test_process_payment_fails_on_gateway_error(
         AsyncMock(side_effect=Exception("Gateway error")),
     ):
         with patch.object(outbox_service, "send_webhook_notification", AsyncMock()):
-            await outbox_service.process_payment(payment.id)
+            with pytest.raises(PaymentProcessingError, match="Gateway error"):
+                await outbox_service.process_payment(payment.id)
 
-            async with TestUow(db_session) as uow:
-                updated = await uow.payments.get(payment.id)
-                assert updated.status == PaymentStatus.FAILED
+        async with TestUow(db_session) as uow:
+            updated = await uow.payments.get(payment.id)
+            assert updated.status == PaymentStatus.FAILED
 
 
 @pytest.mark.asyncio
-async def test_process_payment_swallows_webhook_exception(
+async def test_process_payment_propagates_webhook_exception(
     payment_service: PaymentService,
     outbox_service: OutboxService,
     db_session: AsyncSession,
@@ -94,7 +96,8 @@ async def test_process_payment_swallows_webhook_exception(
             "send_notification",
             AsyncMock(side_effect=Exception("webhook timeout")),
         ):
-            await outbox_service.process_payment(payment.id)
+            with pytest.raises(Exception, match="webhook timeout"):
+                await outbox_service.process_payment(payment.id)
 
     async with TestUow(db_session) as uow:
         updated = await uow.payments.get(payment.id)

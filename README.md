@@ -1,80 +1,167 @@
 # Payments Service
 
-Async payment processing microservice built with FastAPI, Clean Architecture, RabbitMQ, and PostgreSQL.
+Асинхронный сервис обработки платежей на FastAPI + PostgreSQL + RabbitMQ.
 
-## Stack
+## Что реализовано
 
-- **FastAPI** 0.115+ · **Pydantic v2** · **SQLAlchemy 2.0 async** · **asyncpg**
-- **Alembic** (async migrations) · **FastStream** (RabbitMQ) · **dependency-injector**
-- **PostgreSQL 16** · **RabbitMQ 3** · **Docker + docker-compose**
+- `POST /api/v1/payments` — создание платежа (`202 Accepted`).
+- `GET /api/v1/payments/{payment_id}` — получение статуса платежа.
+- Статический API-ключ для всех endpoint: заголовок `X-API-Key`.
+- Idempotency по `Idempotency-Key`: повтор с тем же ключом возвращает `409 Conflict`.
+- Outbox pattern: платеж и событие создаются в одной транзакции, публикация в брокер — через relay.
+- Consumer:
+  - читает `payments.new`,
+  - эмулирует обработку `2-5` секунд,
+  - обновляет статус (`90% succeeded`, `10% failed`),
+  - отправляет webhook с retry.
+- Dead Letter Queue: после 3 попыток обработки сообщение уходит в `payments.new.dlq` через `dead-letter-exchange`.
 
-## Quick Start
+## Технологии
+
+- FastAPI, Pydantic v2
+- SQLAlchemy 2.0 (async), asyncpg
+- PostgreSQL 16
+- RabbitMQ 3 (management UI)
+- Alembic
+- Docker Compose
+
+## Быстрый старт
+
+1. Подготовка переменных окружения:
 
 ```bash
-# 1. Copy env file and adjust values if needed
 cp .env.example .env
-
-# 2. Start all services
-docker-compose up --build
-
-# 3. Run migrations (first time only)
-docker-compose exec api alembic upgrade head
 ```
 
-## API
-
-Interactive docs: http://localhost:8002/docs
-
-All endpoints require the `X-API-Key` header.
-
-### Create payment
-```
-POST /api/v1/payments
-X-API-Key: <key>
-Idempotency-Key: <uuid>
-
-{
-  "amount": "99.99",
-  "currency": "USD",
-  "description": "Order #42",
-  "metadata": {},
-  "webhook_url": "https://example.com/webhook"
-}
-```
-
-### Get payment
-```
-GET /api/v1/payments/{payment_id}
-X-API-Key: <key>
-```
-
-## Architecture
-
-```
-domain/          ← Pure Pydantic models, no I/O
-app_layer/       ← Use-case services + abstract interfaces
-infra/           ← SQLAlchemy, RabbitMQ implementations
-api/             ← FastAPI routers, schemas, auth
-```
-
-## Local Development (without Docker)
+2. Запуск окружения:
 
 ```bash
-# Install uv
-pip install uv
-
-# Create venv and install deps
-uv venv && uv pip install -e ".[dev]"
-
-# Run API
-PYTHONPATH=src uvicorn app.main:app --reload
-
-# Run consumer
-PYTHONPATH=src python -m app.infra.messaging.consumer
+make start
 ```
 
-## Running Tests
+3. Проверка контейнеров:
 
 ```bash
-pytest
+docker compose ps
 ```
+
+Ожидается 4 сервиса: `postgres`, `rabbitmq`, `api`, `consumer`.
+
+## URL для тестирования
+
+- API docs: `http://localhost:8002/docs`
+- RabbitMQ UI: `http://localhost:15672` (`guest/guest`)
+
+## Быстрая ручная проверка (smoke)
+
+```bash
+BASE=http://localhost:8002/api/v1
+PAYMENTS="$BASE/payments"
+KEY=supersecretkey
+IDEM=$(uuidgen)
+PAYLOAD='{"amount":321.45,"currency":"USD","description":"quick-check","metadata":{"order_id":"ORD-QUICK"},"webhook_url":"https://webhook.site/<your-id>"}'
+```
+
+### 1) Auth: без API-ключа -> 401
+
+```bash
+curl -i -s -X POST "$PAYMENTS" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD"
+```
+
+### 2) Создание и дубликат: 202, затем 409
+
+```bash
+curl -s -X POST "$PAYMENTS" \
+  -H "X-API-Key: $KEY" \
+  -H "Idempotency-Key: $IDEM" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" | jq .
+
+curl -s -X POST "$PAYMENTS" \
+  -H "X-API-Key: $KEY" \
+  -H "Idempotency-Key: $IDEM" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" | jq .
+```
+
+### 3) Статус: сразу pending, через 5-10 сек succeeded/failed
+
+```bash
+PID=$(curl -s -X POST "$PAYMENTS" \
+  -H "X-API-Key: $KEY" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" | jq -r .payment_id)
+
+curl -s -H "X-API-Key: $KEY" "$PAYMENTS/$PID" | jq .
+sleep 7
+curl -s -H "X-API-Key: $KEY" "$PAYMENTS/$PID" | jq .
+```
+
+### 4) Валидация/Not Found: 422 и 404
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$PAYMENTS" \
+  -H "X-API-Key: $KEY" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":100,"currency":"JPY","description":"bad-currency","metadata":{},"webhook_url":"https://webhook.site/<your-id>"}'
+
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -H "X-API-Key: $KEY" \
+  "$PAYMENTS/00000000-0000-0000-0000-000000000000"
+```
+
+## Ручная проверка DLQ
+
+1. Очистить очереди:
+
+```bash
+docker compose exec -T rabbitmq rabbitmqctl purge_queue payments.new
+docker compose exec -T rabbitmq rabbitmqctl purge_queue payments.new.dlq
+```
+
+2. Опубликовать заведомо невалидный для БД `payment_id`:
+
+```bash
+docker compose exec -T rabbitmq rabbitmqadmin -u guest -p guest publish \
+  exchange=amq.default \
+  routing_key=payments.new \
+  payload='{"payment_id":"00000000-0000-0000-0000-000000000003"}' \
+  payload_encoding=string \
+  properties='{"content_type":"application/json"}'
+```
+
+3. Проверить, что сообщение ушло в DLQ:
+
+```bash
+sleep 2
+docker compose exec -T rabbitmq rabbitmqctl list_queues name messages_ready messages_unacknowledged
+```
+
+Ожидается: `payments.new.dlq` имеет `Ready >= 1`.
+
+4. Подтвердить 3 попытки обработки в логах consumer:
+
+```bash
+docker compose logs --since=2m consumer | rg '00000000-0000-0000-0000-000000000003|PaymentNotFoundError'
+```
+
+Ожидается: строка `Received payment event ...` появляется 3 раза, затем ошибка.
+
+## Тесты и линт
+
+```bash
+make test
+make lint
+```
+
+## Команды разработки
+
+- `make start` — запуск docker compose.
+- `make test` — запуск `pytest`.
+- `make lint` — форматирование + линт (`ruff`).
+- `make migrate` — автогенерация миграции Alembic.
