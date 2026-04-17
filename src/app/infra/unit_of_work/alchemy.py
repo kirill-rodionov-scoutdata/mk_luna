@@ -7,7 +7,7 @@ from app.infra.repositories.outbox_repository import SqlAlchemyOutboxRepository
 from app.infra.repositories.payment_repository import PaymentsRepository
 
 
-class AlchemyUnitOfWork(AbstractUnitOfWork):
+class UnitOfWork(AbstractUnitOfWork):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self.session_factory = session_factory
 

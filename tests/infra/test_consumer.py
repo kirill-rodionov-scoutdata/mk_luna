@@ -1,5 +1,6 @@
 import uuid
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -11,7 +12,9 @@ from app.infra.rabbitmq.consumer import broker, payments_queue
 
 
 @pytest.fixture
-async def consumer_container(mock_outbox_service: AsyncMock) -> AsyncGenerator[Container, None]:
+async def consumer_container(
+    mock_outbox_service: AsyncMock,
+) -> AsyncGenerator[Container, None]:
     container = Container()
     container.outbox_service.override(providers.Object(mock_outbox_service))
     container.wire(modules=["app.infra.rabbitmq.consumer"])

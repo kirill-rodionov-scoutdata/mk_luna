@@ -4,22 +4,23 @@ from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.app_layer.interfaces.outbox.relay import AbstractOutboxRelay
 from app.app_layer.interfaces.rabbitmq.event_publisher import AbstractEventPublisher
 from app.app_layer.interfaces.repositories import OutboxEventDTO
 from app.config import settings
 from app.infra.rabbitmq.exceptions import OutboxPersistenceError, OutboxPublishError
-from app.infra.unit_of_work.alchemy import AlchemyUnitOfWork
+from app.infra.unit_of_work.alchemy import UnitOfWork
 
 logger = logging.getLogger(__name__)
 
 
-class OutboxRelay:
+class OutboxRelay(AbstractOutboxRelay):
     def __init__(
         self,
         session_factory: async_sessionmaker[AsyncSession],
         publisher: AbstractEventPublisher,
     ) -> None:
-        self.session_factory = session_factory
+        self.uow = UnitOfWork(session_factory)
         self.publisher = publisher
         self.wakeup = asyncio.Event()
         self._running = True
@@ -52,7 +53,7 @@ class OutboxRelay:
             yield
 
     async def process_batch(self) -> None:
-        async with AlchemyUnitOfWork(self.session_factory) as uow:
+        async with self.uow as uow:
             events = await uow.outbox.get_unpublished(limit=100)
 
         for event in events:
@@ -80,7 +81,7 @@ class OutboxRelay:
 
     async def mark_published(self, event: OutboxEventDTO) -> None:
         try:
-            async with AlchemyUnitOfWork(self.session_factory) as uow:
+            async with self.uow as uow:
                 await uow.outbox.mark_published(event.id)
         except Exception as exc:
             raise OutboxPersistenceError(event.id, exc) from exc

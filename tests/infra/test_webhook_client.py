@@ -1,14 +1,11 @@
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
 
 from app.config import settings
 from app.infra.clients.webhook import WebhookClient
-
-
-
 
 
 async def test_webhook_client_success(
@@ -26,7 +23,9 @@ async def test_webhook_client_success(
     mock_client.post.assert_called_once_with(url, json=payload, timeout=10.0)
 
 
-async def test_webhook_client_sends_correct_payload(payment_records: list[dict[str, Any]]) -> None:
+async def test_webhook_client_sends_correct_payload(
+    payment_records: list[dict[str, Any]], make_mock_http_client: Any
+) -> None:
     record = payment_records[3]
     url = record["webhook_url"]
     idempotency_key = record["idempotency_key"]
@@ -36,7 +35,7 @@ async def test_webhook_client_sends_correct_payload(payment_records: list[dict[s
         "idempotency_key": idempotency_key,
     }
 
-    mock_client = _make_mock_http_client()
+    mock_client = make_mock_http_client()
 
     with patch("httpx.AsyncClient", return_value=mock_client):
         await WebhookClient().send_notification(url, payload)

@@ -90,8 +90,8 @@ async def test_process_payment_swallows_webhook_exception(
         outbox_service, "_simulate_external_gate_processing", AsyncMock()
     ):
         with patch.object(
-            outbox_service,
-            "send_webhook_notification",
+            outbox_service._webhook_client,
+            "send_notification",
             AsyncMock(side_effect=Exception("webhook timeout")),
         ):
             await outbox_service.process_payment(payment.id)

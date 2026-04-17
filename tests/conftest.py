@@ -1,6 +1,7 @@
 import json
 import pathlib
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -34,6 +35,11 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
 @pytest_asyncio.fixture
 async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
     async with engine.connect() as conn:
+        from sqlalchemy import text
+
+        await conn.execute(text("TRUNCATE TABLE outbox_messages, payments CASCADE"))
+        await conn.commit()
+
         await conn.begin()
         session = AsyncSession(
             bind=conn,

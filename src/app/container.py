@@ -6,7 +6,7 @@ from app.config import settings
 from app.infra.clients.webhook import WebhookClient
 from app.infra.db.session import build_session_factory
 from app.infra.rabbitmq.publisher import RabbitMQEventPublisher
-from app.infra.unit_of_work.alchemy import AlchemyUnitOfWork
+from app.infra.unit_of_work.alchemy import UnitOfWork
 
 
 class Container(containers.DeclarativeContainer):
@@ -18,7 +18,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     unit_of_work = providers.Factory(
-        AlchemyUnitOfWork,
+        UnitOfWork,
         session_factory=session_factory,
     )
 

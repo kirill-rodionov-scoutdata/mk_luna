@@ -4,6 +4,7 @@ import uuid
 
 from dependency_injector.wiring import Provide, inject
 from faststream.rabbit import ExchangeType, RabbitBroker, RabbitExchange, RabbitQueue
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from app.app_layer.interfaces.outbox_messages.service import AbstractOutboxService
 from app.config import settings
@@ -25,18 +26,20 @@ payments_queue = RabbitQueue(
 broker = RabbitBroker(settings.rabbitmq.url)
 
 
-@broker.subscriber(
-    payments_queue,
-    retry=settings.rabbitmq.payments_retry_count,  # Attempt before sending to DLQ
+@broker.subscriber(payments_queue)
+@retry(
+    stop=stop_after_attempt(settings.rabbitmq.payments_retry_count),
+    wait=wait_fixed(0.1),
+    reraise=True,
 )
 @inject
 async def handle_payment_created(
-    payload: dict,
+    payment_id: str,
     outbox_service: AbstractOutboxService = Provide[Container.outbox_service],
 ) -> None:
-    logger.info("Received payment event: %s", payload)
-    payment_id = uuid.UUID(payload["payment_id"])
-    await outbox_service.process_payment(payment_id)
+    logger.info("Received payment event: %s", payment_id)
+    payment_id_uuid = uuid.UUID(payment_id)
+    await outbox_service.process_payment(payment_id_uuid)
 
 
 async def main() -> None:

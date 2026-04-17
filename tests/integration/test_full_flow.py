@@ -1,8 +1,8 @@
 from typing import Any
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.models.outbox import OutboxEventType
 from app.domain.models.payment import PaymentStatus
