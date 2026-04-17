@@ -24,8 +24,8 @@ class PaymentsRepository(AbstractPaymentRepository):
         self._session.add(payment.to_orm())
         try:
             await self._session.flush()
-        except IntegrityError:
-            raise DuplicateIdempotencyKeyError(payment.idempotency_key)
+        except IntegrityError as exc:
+            raise DuplicateIdempotencyKeyError(payment.idempotency_key) from exc
 
     async def get(self, payment_id: uuid.UUID) -> PaymentEntity | None:
         result = await self._session.get(PaymentORM, payment_id)

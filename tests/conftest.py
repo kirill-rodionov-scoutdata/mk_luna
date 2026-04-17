@@ -12,10 +12,9 @@ from app.main import app
 from tests.environment.publisher import FakePublisher
 from tests.environment.unit_of_work import TestUow
 from tests.satellites import (
-    make_payment_api_body,
+    make_outbox_service,
     make_payment_entity,
     make_payment_service,
-    make_outbox_service,
 )
 
 
@@ -52,7 +51,9 @@ def fake_publisher() -> FakePublisher:
 
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession, fake_publisher: FakePublisher) -> AsyncClient:
+async def client(
+    db_session: AsyncSession, fake_publisher: FakePublisher
+) -> AsyncClient:
     container = app.state.container
     test_uow = TestUow(db_session)
 

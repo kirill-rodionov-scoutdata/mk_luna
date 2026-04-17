@@ -8,7 +8,10 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.app_layer.interfaces.repositories import AbstractOutboxRepository, OutboxEventDTO
+from app.app_layer.interfaces.repositories import (
+    AbstractOutboxRepository,
+    OutboxEventDTO,
+)
 from app.domain.models.outbox import OutboxEventType
 from app.infra.db.models import OutboxORM
 

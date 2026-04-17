@@ -11,7 +11,11 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from app.api.dependencies import verify_api_key
-from app.api.v1.schemas import CreatePaymentRequest, PaymentCreatedResponse, PaymentDetailResponse
+from app.api.v1.schemas import (
+    CreatePaymentRequest,
+    PaymentCreatedResponse,
+    PaymentDetailResponse,
+)
 from app.app_layer.services.payment import PaymentService
 from app.container import Container
 from app.domain.exceptions import DuplicateIdempotencyKeyError, PaymentNotFoundError
@@ -41,7 +45,9 @@ async def create_payment(
             webhook_url=str(body.webhook_url),
         )
     except DuplicateIdempotencyKeyError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     return PaymentCreatedResponse(
         payment_id=payment.id,
         status=payment.status,
@@ -62,7 +68,9 @@ async def get_payment(
     try:
         payment = await payment_service.get_payment(payment_id)
     except PaymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
 
     return PaymentDetailResponse(
         payment_id=payment.id,

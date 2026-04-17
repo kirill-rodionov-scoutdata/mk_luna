@@ -1,5 +1,5 @@
-import uuid
 import logging
+import uuid
 from datetime import UTC, datetime
 
 import httpx
@@ -26,14 +26,20 @@ class OutboxService(AbstractOutboxService):
                 raise PaymentNotFoundError(str(payment_id))
 
             if payment.status != PaymentStatus.PENDING:
-                logger.info("Payment %s already processed with status %s", payment_id, payment.status)
+                logger.info(
+                    "Payment %s already processed with status %s",
+                    payment_id,
+                    payment.status,
+                )
                 return
 
             try:
                 await self._simulate_external_gate_processing()
                 payment.status = PaymentStatus.SUCCEEDED
             except Exception as exc:
-                logger.warning("Simulated gate failure for payment %s: %s", payment_id, exc)
+                logger.warning(
+                    "Simulated gate failure for payment %s: %s", payment_id, exc
+                )
                 payment.status = PaymentStatus.FAILED
 
             payment.processed_at = datetime.now(UTC)
@@ -65,7 +71,14 @@ class OutboxService(AbstractOutboxService):
         }
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(payment.webhook_url, json=payload, timeout=10.0)
+                response = await client.post(
+                    payment.webhook_url, json=payload, timeout=10.0
+                )
                 response.raise_for_status()
         except Exception as exc:
-            logger.error("Failed to send webhook for payment %s to %s: %s", payment.id, payment.webhook_url, exc)
+            logger.error(
+                "Failed to send webhook for payment %s to %s: %s",
+                payment.id,
+                payment.webhook_url,
+                exc,
+            )

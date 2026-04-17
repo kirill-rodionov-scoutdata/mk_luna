@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -44,7 +44,7 @@ class OutboxRelay:
                     self.wakeup.wait(),
                     timeout=settings.outbox_poll_interval_seconds,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             self.wakeup.clear()
             yield

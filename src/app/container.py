@@ -1,11 +1,11 @@
 from dependency_injector import containers, providers
 
+from app.app_layer.services.outbox import OutboxService
+from app.app_layer.services.payment import PaymentService
 from app.config import settings
 from app.infra.db.session import build_session_factory
-from app.infra.unit_of_work.alchemy import AlchemyUnitOfWork
 from app.infra.rabbitmq.publisher import RabbitMQEventPublisher
-from app.app_layer.services.payment import PaymentService
-from app.app_layer.services.outbox import OutboxService
+from app.infra.unit_of_work.alchemy import AlchemyUnitOfWork
 
 
 class Container(containers.DeclarativeContainer):

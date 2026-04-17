@@ -15,8 +15,8 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from app.domain.models.payment import Currency, PaymentStatus
 
-
 # ── Request schemas ───────────────────────────────────────────────────────────
+
 
 class CreatePaymentRequest(BaseModel):
     amount: Decimal
@@ -27,6 +27,7 @@ class CreatePaymentRequest(BaseModel):
 
 
 # ── Response schemas ──────────────────────────────────────────────────────────
+
 
 class PaymentCreatedResponse(BaseModel):
     payment_id: uuid.UUID

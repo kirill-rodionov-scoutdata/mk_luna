@@ -21,6 +21,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-httpx>=0.30.0",
+    "ruff>=0.4.0",
 ]
 
 [build-system]
@@ -39,3 +40,22 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black (ruff format)
+    "B008",  # do not perform function calls in argument defaults (fastapi depends)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

@@ -1,4 +1,4 @@
-.PHONY: start stop restart logs clean test migrate
+.PHONY: start stop restart logs clean test migrate lint format
 
 # Copy .env from example if it doesn't exist yet
 .env:
@@ -23,3 +23,10 @@ migrate:
 
 test:
 	@POSTGRES_HOST=localhost uv run pytest tests/ -v
+
+lint:
+	uv run ruff check src tests
+
+format:
+	uv run ruff format src tests
+	uv run ruff check --fix src tests

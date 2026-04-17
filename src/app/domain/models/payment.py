@@ -5,7 +5,7 @@ Domain model for Payment.
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -14,13 +14,13 @@ if TYPE_CHECKING:
     from app.infra.db.models import PaymentORM
 
 
-class Currency(str, Enum):
+class Currency(StrEnum):
     RUB = "RUB"
     USD = "USD"
     EUR = "EUR"
 
 
-class PaymentStatus(str, Enum):
+class PaymentStatus(StrEnum):
     PENDING = "pending"
     SUCCEEDED = "succeeded"
     FAILED = "failed"

@@ -10,7 +10,7 @@ from tests.environment.unit_of_work import TestUow
 
 
 async def test_create_payment_returns_new_payment(payment_service, payment_records):
-    
+
     record = payment_records[0]
     kwargs = {
         **record,
@@ -18,10 +18,8 @@ async def test_create_payment_returns_new_payment(payment_service, payment_recor
         "currency": Currency(record["currency"]),
     }
 
-    
     payment = await payment_service.create_payment(**kwargs)
 
-    
     assert payment.idempotency_key == record["idempotency_key"]
     assert payment.amount == Decimal(record["amount"])
     assert payment.currency == record["currency"]
@@ -29,8 +27,10 @@ async def test_create_payment_returns_new_payment(payment_service, payment_recor
     assert payment.id is not None
 
 
-async def test_create_payment_persists_to_repository(db_session, payment_service, payment_records):
-    
+async def test_create_payment_persists_to_repository(
+    db_session, payment_service, payment_records
+):
+
     record = payment_records[0]
     kwargs = {
         **record,
@@ -38,10 +38,8 @@ async def test_create_payment_persists_to_repository(db_session, payment_service
         "currency": Currency(record["currency"]),
     }
 
-    
     payment = await payment_service.create_payment(**kwargs)
 
-    
     async with TestUow(db_session) as uow:
         stored = await uow.payments.get(payment.id)
     assert stored is not None
@@ -49,7 +47,7 @@ async def test_create_payment_persists_to_repository(db_session, payment_service
 
 
 async def test_create_payment_is_idempotent(payment_service, payment_records):
-    
+
     record = payment_records[0]
     kwargs = {
         **record,
@@ -57,16 +55,16 @@ async def test_create_payment_is_idempotent(payment_service, payment_records):
         "currency": Currency(record["currency"]),
     }
 
-    
     first = await payment_service.create_payment(**kwargs)
     second = await payment_service.create_payment(**kwargs)
 
-    
     assert first.id == second.id
 
 
-async def test_create_payment_adds_outbox_event(db_session, payment_service, payment_records):
-    
+async def test_create_payment_adds_outbox_event(
+    db_session, payment_service, payment_records
+):
+
     record = payment_records[0]
     kwargs = {
         **record,
@@ -74,10 +72,8 @@ async def test_create_payment_adds_outbox_event(db_session, payment_service, pay
         "currency": Currency(record["currency"]),
     }
 
-    
     payment = await payment_service.create_payment(**kwargs)
 
-    
     async with TestUow(db_session) as uow:
         events = await uow.outbox.get_unpublished()
     assert len(events) == 1
@@ -88,7 +84,7 @@ async def test_create_payment_adds_outbox_event(db_session, payment_service, pay
 async def test_create_payment_idempotent_does_not_add_extra_outbox_event(
     db_session, payment_service, payment_records
 ):
-    
+
     record = payment_records[0]
     kwargs = {
         **record,
@@ -96,18 +92,16 @@ async def test_create_payment_idempotent_does_not_add_extra_outbox_event(
         "currency": Currency(record["currency"]),
     }
 
-    
     await payment_service.create_payment(**kwargs)
     await payment_service.create_payment(**kwargs)
 
-    
     async with TestUow(db_session) as uow:
         events = await uow.outbox.get_unpublished()
     assert len(events) == 1
 
 
 async def test_get_payment_returns_existing(payment_service, payment_records):
-    
+
     record = payment_records[0]
     kwargs = {
         **record,
@@ -116,25 +110,23 @@ async def test_get_payment_returns_existing(payment_service, payment_records):
     }
     created = await payment_service.create_payment(**kwargs)
 
-    
     fetched = await payment_service.get_payment(created.id)
 
-    
     assert fetched.id == created.id
     assert fetched.idempotency_key == record["idempotency_key"]
 
 
 async def test_get_payment_raises_not_found_for_unknown_id(payment_service):
-    
+
     unknown_id = uuid.uuid4()
 
-     # Assert
+    # Assert
     with pytest.raises(PaymentNotFoundError):
         await payment_service.get_payment(unknown_id)
 
 
 async def test_create_payment_with_metadata(payment_service, payment_records):
-    
+
     # Use record with rich metadata
     record = payment_records[2]
     kwargs = {
@@ -143,8 +135,6 @@ async def test_create_payment_with_metadata(payment_service, payment_records):
         "currency": Currency(record["currency"]),
     }
 
-    
     payment = await payment_service.create_payment(**kwargs)
 
-    
     assert payment.metadata == record["metadata"]

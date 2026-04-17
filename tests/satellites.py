@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from app.app_layer.services.payment import PaymentService
 from app.app_layer.services.outbox import OutboxService
+from app.app_layer.services.payment import PaymentService
 from app.domain.models.payment import Currency, PaymentEntity
 
 
